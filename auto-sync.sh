@@ -117,7 +117,8 @@ function main() {
         if [[ -f "${local_target_path}" ]]; then
             # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
             # echo "${local_target_path}"
-            # rm "${source_path}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+            rm "${source_path}"
             let COUNT++
             continue
         fi
