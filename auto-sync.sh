@@ -65,8 +65,22 @@ function get_download_info() {
     done
 }
 
+function lock(){
+    $(touch auto_sync.lock)
+}
+function get_lock_status(){
+    if [[ -f "auto_sync.lock" ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已有同步程序正在执行 "
+        exit 0
+    fi
+}
+function unlock(){
+    $(rm -rf auto_sync.lock)
+}
+
 # 同步已下载文件
 function main() {
+    get_lock_status
     login
     get_download_info
     data=$(echo ${all} | sed 's/}/},/g')
@@ -77,7 +91,7 @@ function main() {
     COUNT=0
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已下载完成的文件数: ${len} "
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行同步脚本 "
-    
+    lock
     while [[ $COUNT -lt $len ]]; do
         item=$(echo "$data" | jq ".[$COUNT]")
         file_name=$(echo "$item" | jq -r '.name')
@@ -114,7 +128,8 @@ function main() {
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
         let COUNT++
     done
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步脚本执行结束 " 
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步脚本执行结束 "
+    unlock
     exit 0
 }
 
