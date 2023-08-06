@@ -22,5 +22,6 @@ cd ~ && wget -q -O auto-sync.sh https://raw.githubusercontent.com/CCCOrz/qBittor
 - [ ] 自定义保种时间
 - [ ] 多线程上传
 - [ ] 空间不足时暂停等待
+- [ ] 文件接力
 - [ ] ...
 
