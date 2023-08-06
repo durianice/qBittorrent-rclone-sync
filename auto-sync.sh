@@ -66,16 +66,18 @@ function get_download_info() {
 }
 
 function lock(){
-    $(touch auto_sync.lock)
+    $(touch "${log_path}/auto_sync.lock")
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已上锁 "
 }
 function get_lock_status(){
-    if [[ -f "auto_sync.lock" ]]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已有同步程序正在执行 "
+    if [[ -f "${log_path}/auto_sync.lock" ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 锁定中 "
         exit 0
     fi
 }
 function unlock(){
-    $(rm -rf auto_sync.lock)
+    rm -rf "${log_path}/auto_sync.lock"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已解锁 "
 }
 
 # 同步已下载文件
