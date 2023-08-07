@@ -22,7 +22,6 @@ if [ ! -d "$log_path" ]; then
 fi
 log_file=${log_path}/qbit_sync_rclone.log
 
-
 ############# Statr #############
 all=''
 if [ ! -d "$folder" ]; then
