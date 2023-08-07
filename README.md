@@ -21,7 +21,7 @@ cd ~ && wget -q -O auto-sync.sh https://raw.githubusercontent.com/CCCOrz/qBittor
 - [ ] 内存预警
 - [ ] 自定义保种时间
 - [ ] 多线程上传
-- [ ] 空间不足时暂停等待
+- [x] 空间不足时暂停下载
 - [ ] 文件接力
 - [ ] ...
 
