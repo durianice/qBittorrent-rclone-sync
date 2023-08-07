@@ -14,7 +14,8 @@ cd ~ && wget -q -O auto-sync.sh https://raw.githubusercontent.com/CCCOrz/qBittor
 ```
 
 ## Friendly reminder
-如果没有控制好下载速度，Download > Upload，可能会导致VPS内存爆满等其他问题😣
+~~如果没有控制好下载速度，Download > Upload，可能会导致VPS内存爆满等其他问题😣~~
+已启用拥塞控制😈
 
 ## Todo
 - [ ] 消息通知
