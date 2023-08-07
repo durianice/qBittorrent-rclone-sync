@@ -160,9 +160,9 @@ function getFreeDisk() {
     free_space_mb=$(expr $free_space_kb / 1024)
     free_space_gb=$(expr $free_space_mb / 1024)
     free_space_gb=$(echo ${free_space_gb%.*})
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间小于 $MIN_DIST 时停止下载"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间大于 $MAX_DIST 时恢复下载"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 $free_space_gb"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间小于 ${MIN_DIST}GB 时停止下载"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间大于 ${MAX_DIST}GB 时恢复下载"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB"
     if [ "$free_space_gb" -lt "$MIN_DIST" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间不足"
         getDownloading
