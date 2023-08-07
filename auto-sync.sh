@@ -174,9 +174,9 @@ function getFreeDisk() {
 
 # 同步已下载文件
 function main() {
-    get_lock_status
     login
     getFreeDisk
+    get_lock_status
     get_download_info
     data=$(echo ${all} | sed 's/}/},/g')
     # data=$(echo ${all} | sed 's/}/},/g' | sed 's/ //g')
