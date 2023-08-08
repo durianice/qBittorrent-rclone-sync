@@ -40,17 +40,17 @@ function login() {
 
 # 获取所有信息
 function get_all_info() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取全部列表 "
-    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}")
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取下载列表 "
+    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" ｜ jq -c '.[] | select(.state == "downloading")')
 }
 
 # 获取下载信息
 function get_download_info() {
     local data=${download_data}
     local len=$(echo "$data" | jq '.|length')
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 全部列表: ${len} "
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表: ${len} "
     if [ "$len" -eq 0 ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 列表为空脚本退出 "
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表为空脚本退出 "
         exit 0
     fi
     local COUNT=0
