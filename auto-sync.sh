@@ -30,7 +30,7 @@ fi
 
 function login() {
     qb_cookie=$(curl -s -i --header "Referer: ${qb_host}" --data "username=${qb_username}&password=${qb_password}" "${qb_host}/api/v2/auth/login" | grep -P -o 'SID=\S{32}')
-    if [ -n ${cookie} ]; then
+    if [ -n ${qb_cookie} ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 登录成功 "
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 登录失败 "
