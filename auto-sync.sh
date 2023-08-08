@@ -123,9 +123,9 @@ function lock() {
 function get_lock_status() {
     if [[ -f "${log_path}/lockfile/_$1.lock" ]]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
-        return 1
+        locked="1"
     else 
-        return 0
+        locked="0"
     fi
 }
 function unlock() {
@@ -204,8 +204,9 @@ function get_free_disk() {
 
 # 同步
 function sync() {
-    local lock_status=$(get_lock_status "sync_task")
-    if [[ ${lock_status} == 1 ]]; then
+    get_lock_status "sync_task"
+    echo "${lock_status}"
+    if [[ ${locked} == "1" ]]; then
         exit 0
     fi
     lock "sync_task"
@@ -258,8 +259,8 @@ function sync() {
             let COUNT++
             continue
         fi
-        local lock_status=$(get_lock_status "${source_path}")
-        if [[ ${lock_status} == 1 ]]; then
+        get_lock_status "${source_path}"
+        if [[ ${locked} == "1" ]]; then
             let COUNT++
             continue
         fi
