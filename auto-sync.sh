@@ -13,7 +13,7 @@ rclone_local_dir="/opt/GoogleDrive"
 rclone_remote_dir="/media/tv/"
 # Custom Config
 CTRL_TAG="CTRL_BY_SCRIPT"
-MAX_DIST=10
+MAX_DIST=5
 MIN_DIST=1
 # log
 log_path="/opt/qBittorrent/log"
@@ -110,7 +110,7 @@ function unlock() {
 }
 
 function getDownloading() {
-    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL") | [.name, .hash, tags] | @csv')
+    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL") | [.name, .hash, .tags] | @csv')
     if [ -z "$res" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载队列为空"
         exit 0
