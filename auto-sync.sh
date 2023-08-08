@@ -13,8 +13,9 @@ rclone_local_dir="/opt/GoogleDrive"
 rclone_remote_dir="/media/tv/"
 # Custom Config
 CTRL_TAG="CTRL_BY_SCRIPT"
-MAX_DIST=5
-MIN_DIST=1
+# 缓冲
+MAX_DIST=9
+MIN_DIST=3
 # log
 log_path="/opt/qBittorrent/log"
 if [ ! -d "$log_path" ]; then
@@ -23,7 +24,6 @@ fi
 log_file=${log_path}/qbit_sync_rclone.log
 
 ############# Statr #############
-all=''
 if [ ! -d "$folder" ]; then
     mkdir -p ${log_path}
 fi
@@ -40,58 +40,62 @@ function login() {
 
 # 获取所有信息
 function get_all_info() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始获取下载列表 "
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取全部列表 "
     download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}")
-    download_len=$(echo "$download_data" | jq '.|length')
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表: ${download_len} "
-    if [ "$download_len" -eq 0 ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 暂无任务脚本退出 "
-        exit 0
-    fi
 }
 
 # 获取下载信息
 function get_download_info() {
-    get_all_info
-    COUNT=0
+    local data=${download_data}
+    local len=$(echo "$data" | jq '.|length')
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 全部列表: ${len} "
+    if [ "$len" -eq 0 ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 列表为空脚本退出 "
+        exit 0
+    fi
+    local COUNT=0
+    local temp=''
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始获取文件详情 "
-    while [[ $COUNT -lt $download_len ]]; do
-        item=$(echo "$download_data" | jq ".[$COUNT]")
+    while [[ $COUNT -lt $len ]]; do
+        item=$(echo "$data" | jq ".[$COUNT]")
         name=$(echo "$item" | jq -r '.name')
         hash=$(echo "$item" | jq -r '.hash')
         progress=$(echo "$item" | jq -r '.progress')
         download_path=$(echo "$item" | jq -r '.download_path')
         save_path=$(echo "$item" | jq -r '.save_path')
         finished_file=$(curl -s "${qb_host}/api/v2/torrents/files?hash=${hash}" --cookie "${qb_cookie}" | jq -c --arg dp "$download_path" --arg sp "$save_path" '.[] | select(.progress == 1) | . + {download_path: $dp,save_path: $sp}')
-        all+="${finished_file}"
+        temp+="${finished_file}"
         let COUNT++
     done
+    all_done_list=$(echo ${temp} | sed 's/}/},/g')
+    all_done_list=${all_done_list%,}
+    all_done_list="[${all_done_list}]"
 }
 
 # 暂停
 function pause() {
-    hash=$(echo "$1" | sed 's/"//g')
+    local hash=$(echo "$1" | sed 's/"//g')
     curl -s "${qb_host}/api/v2/torrents/pause" \
         -H 'Content-type: application/x-www-form-urlencoded; charset=UTF-8' \
         -H "Cookie: ${qb_cookie}" \
         --data-raw "hashes=$hash" \
         --compressed \
         --insecure
-    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state] | @csv')
+    local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state] | @csv')
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已暂停 $res "
 }
 
 # 恢复下载
 function resume() {
-    hash=$(echo "$1" | sed 's/"//g')
+    local hash=$(echo "$1" | sed 's/"//g')
     curl -s "${qb_host}/api/v2/torrents/resume" \
         -H 'Content-type: application/x-www-form-urlencoded; charset=UTF-8' \
         -H "Cookie: ${qb_cookie}" \
         --data-raw "hashes=$hash" \
         --compressed \
         --insecure
-    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state] | @csv')
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已恢复下载 $res "
+    local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state] | @csv')
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已恢复 $res "
 }
 
 function lock() {
@@ -109,34 +113,13 @@ function unlock() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已解锁 "
 }
 
-function getDownloading() {
-    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL") | [.name, .hash, .tags] | @csv')
+function get_downloading_queue() {
+    local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL"), select(.state == "queuedDL") | [.name, .hash, .tags] | @csv')
     if [ -z "$res" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载队列为空"
-        exit 0
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前下载&等待下载队列为空"
+        return
     fi
-    local -A map
-    local -A tags_map
-    while IFS=',' read name hash; do
-        map[$name]="$hash"
-        tags_map[$name]=$(echo "$tags" | sed 's/"//g')
-    done <<<"$res"
-
-    for i in "${!map[@]}"; do
-        if [ "${tags_map[$i]}" != "${CTRL_TAG}" ]; then
-            continue
-        else
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $i ${map[$i]} 准备挂起下载"
-            pause ${map[$i]}
-        fi
-    done
-}
-function getPause() {
-    res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "pausedDL") | [.name, .hash, .tags] | @csv')
-    if [ -z "$res" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 暂停队列为空"
-        exit 0
-    fi
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前下载&等待下载队列 $res"
     local -A map
     local -A tags_map
     while IFS=',' read name hash tags; do
@@ -148,49 +131,61 @@ function getPause() {
         if [ "${tags_map[$i]}" != "${CTRL_TAG}" ]; then
             continue
         else
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $i ${map[$i]} 准备恢复下载"
+            pause ${map[$i]}
+        fi
+    done
+}
+function get_paused_queue() {
+    local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "pausedDL") | [.name, .hash, .tags] | @csv')
+    if [ -z "$res" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前暂停队列为空"
+        return
+    fi
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前暂停队列 $res"
+    local -A map
+    local -A tags_map
+    while IFS=',' read name hash tags; do
+        map[$name]="$hash"
+        tags_map[$name]=$(echo "$tags" | sed 's/"//g')
+    done <<<"$res"
+
+    for i in "${!map[@]}"; do
+        if [ "${tags_map[$i]}" != "${CTRL_TAG}" ]; then
+            continue
+        else
             resume ${map[$i]}
         fi
     done
 }
 
-function getFreeDisk() {
-    free_space_kb=$(df --output=avail / | tail -n 1)
-    free_space_kb=$(expr $free_space_kb + 0)
-    free_space_mb=$(expr $free_space_kb / 1024)
-    free_space_gb=$(expr $free_space_mb / 1024)
-    free_space_gb=$(echo ${free_space_gb%.*})
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间小于 ${MIN_DIST}GB 时停止下载"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间大于 ${MAX_DIST}GB 时恢复下载"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB"
-    if [ "$free_space_gb" -lt "$MIN_DIST" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间不足"
-        getDownloading
-        exit 0
+function get_free_disk() {
+    local free_space_kb=$(df --output=avail / | tail -n 1)
+    local free_space_kb=$(expr $free_space_kb + 0)
+    local free_space_mb=$(expr $free_space_kb / 1024)
+    local free_space_gb=$(expr $free_space_mb / 1024)
+    local free_space_gb=$(echo ${free_space_gb%.*})
+    if [ "$free_space_gb" -le "$MIN_DIST" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB 磁盘空间不足"
+        get_downloading_queue
     fi
     if [ "$free_space_gb" -gt "$MAX_DIST" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 磁盘空间充足"
-        getPause
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB 磁盘空间充足"
+        get_paused_queue
     fi
+    # MIN_DIST 到 MAX_DIST 之间作为缓冲
 }
 
-# 同步已下载文件
-function main() {
-    login
-    getFreeDisk
-    get_lock_status
-    get_download_info
-    data=$(echo ${all} | sed 's/}/},/g')
-    # data=$(echo ${all} | sed 's/}/},/g' | sed 's/ //g')
-    data=${data%,}
-    data="[${data}]"
-    len=$(echo "$data" | jq -c '.|length')
-    COUNT=0
+
+# 同步
+function sync() {
+    lock
+    list=${all_done_list}
+    local len=$(echo "$list" | jq -c '.|length')
+    local COUNT=0
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已下载完成的文件数: ${len} "
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行同步脚本 "
-    lock
     while [[ $COUNT -lt $len ]]; do
-        item=$(echo "$data" | jq ".[$COUNT]")
+        item=$(echo "$list" | jq ".[$COUNT]")
         file_name=$(echo "$item" | jq -r '.name')
         download_path=$(echo "$item" | jq -r '.download_path')
         save_path=$(echo "$item" | jq -r '.save_path')
@@ -229,6 +224,15 @@ function main() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步脚本执行结束 "
     unlock
     exit 0
+}
+
+function main() {
+    login
+    get_free_disk
+    get_lock_status
+    get_all_info
+    get_download_info
+    sync
 }
 
 echo "-----------"
