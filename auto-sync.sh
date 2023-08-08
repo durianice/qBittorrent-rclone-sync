@@ -205,7 +205,6 @@ function get_free_disk() {
 # 同步
 function sync() {
     get_lock_status "sync_task"
-    echo "${lock_status}"
     if [[ ${locked} == "1" ]]; then
         exit 0
     fi
