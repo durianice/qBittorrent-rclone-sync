@@ -6,17 +6,18 @@
 qb_host="http://127.0.0.1:8080"
 qb_username="admin"
 qb_password="adminadmin"
-qb_transfers=4
 # rclone Config
 rclone_name="gdrive:"
 rclone_local_dir="/opt/GoogleDrive"
 rclone_remote_dir="/media/tv/"
+multi_thread_streams=16
 # Custom Config
 CTRL_TAG="CTRL_BY_SCRIPT"
 # 缓冲
 MAX_DIST=9
 MIN_DIST=3
 THREAD=5
+SYNC_ONLY_DLING=1
 # log
 log_path="/opt/qBittorrent/log"
 if [ ! -d "$log_path" ]; then
@@ -41,9 +42,13 @@ function login() {
 
 # 获取所有信息
 function get_all_info() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取下载列表 "
-    # download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[] | select(.state == "downloading")')
-    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[]')
+    if [[ $SYNC_ONLY_DLING == 1 ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取所有正在下载列表"
+        download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[] | select(.state == "downloading")')
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取所有列表"
+        download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[]')
+    fi
     download_data=$(echo ${download_data} | sed 's/}/},/g')
     download_data=${download_data%,}
     download_data="[${download_data}]"
@@ -58,7 +63,7 @@ function get_download_info() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表: ${len} "
     if [ "$len" -eq 0 ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表为空 "
-        exit 0
+        return 0
     fi
     local COUNT=0
     local temp=''
@@ -121,7 +126,7 @@ function lock() {
 }
 function get_lock_status() {
     if [[ -f "${log_path}/lockfile/_$1.lock" ]]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
+        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
         locked="1"
     else 
         locked="0"
@@ -204,12 +209,7 @@ function get_free_disk() {
 
 # 同步
 function sync() {
-    get_lock_status "sync_task"
-    if [[ ${locked} == "1" ]]; then
-        exit 0
-    fi
-    lock "sync_task"
-    ## 创建计数文件
+    # 创建计数文件
     tmp_fifofile="/${log_path}/$$.fifo" 
     mkfifo $tmp_fifofile
     exec 6<>$tmp_fifofile 
@@ -217,86 +217,80 @@ function sync() {
     for ((i=0;i<${THREAD};i++));do
         echo -ne "\n" 1>&6
     done
-    ## 创建计数结束
 
     list=${all_done_list}
     local len=$(echo "$list" | jq -c '.|length')
     local COUNT=0
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已下载完成的文件数: ${len} "
     if [[ ${len} == 0 ]]; then
-        exit 0
+        return 0
     fi
     local start_time=$(date +%s)
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行同步任务 并发数 ${THREAD}"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 执行中..."
     while [[ $COUNT -lt $len ]]; do
-        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 遍历第 ${COUNT} 个文件"
-
         read -u 6
-        
         {   
-            # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 创建线程 ${COUNT} "
             item=$(echo "$list" | jq ".[$COUNT]")
             file_name=$(echo "$item" | jq -r '.name')
-
-            get_lock_status "${file_name}"
-            if [[ ${locked} == "1" ]]; then
-                break
-            fi
-            lock "${file_name}"
-
             download_path=$(echo "$item" | jq -r '.download_path')
             save_path=$(echo "$item" | jq -r '.save_path')
             file_temp_path="${download_path}/${file_name}"
             file_save_path="${save_path}/${file_name}"
             source_path="${file_temp_path}"
 
-            
             if [[ ! -f "${file_temp_path}" ]]; then
                 source_path="${file_save_path}"
             fi
 
-            if [[  -f "${source_path}" ]]; then
-                target_path="${rclone_name}${rclone_remote_dir}${file_name}"
-                local_target_path="${rclone_local_dir}${rclone_remote_dir}${file_name}"
-                if [[ ! -f "${local_target_path}" ]]; then
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始同步 ${COUNT} "
-                    echo "FROM:"
-                    echo "${source_path}"
-                    echo "TO:"
-                    echo "${target_path}"
-                    cmd=$(/usr/bin/rclone -v -P moveto --transfers ${qb_transfers} --log-file "${log_file}" "${source_path}" "${target_path}")
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
-                else 
-                    # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
-                    # echo "${local_target_path}"
-                    rm "${source_path}"
-                    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+            if [[ -f "${source_path}" ]]; then
+                get_lock_status "${file_name}"
+                if [[ ${locked} == "0" ]]; then
+                    lock "${file_name}"
+                    target_path="${rclone_name}${rclone_remote_dir}${file_name}"
+                    local_target_path="${rclone_local_dir}${rclone_remote_dir}${file_name}"
+                    if [[ ! -f "${local_target_path}" ]]; then
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始同步 ${COUNT} "
+                        echo "FROM:"
+                        echo "${source_path}"
+                        echo "TO:"
+                        echo "${target_path}"
+                        cmd=$(/usr/bin/rclone -v -P moveto --multi-thread-streams ${multi_thread_streams} --log-file "${log_file}" "${source_path}" "${target_path}")
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
+                    else 
+                        # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
+                        # echo "${local_target_path}"
+                        rm "${source_path}"
+                        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+                    fi
+                    unlock "${source_path}"
                 fi
             fi
-            
-            unlock "${source_path}"
             echo -ne "\n" 1>&6
         } &
         let COUNT++
     done
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 等待全部线程结束 "
     wait
     exec 6>&-
     local end_time=$(date +%s)
     local duration=$(( end_time - start_time ))
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步任务执行结束 耗时 ${duration} 秒"
-    unlock "sync_task"
-    exit 0
 }
 
 function main() {
     login
     get_free_disk
+    get_lock_status "sync_task"
+    if [[ ${locked} == "1" ]]; then
+        exit 0
+    fi
+    lock "sync_task"
     get_all_info
     get_download_info
     sync
+    unlock "sync_task"
     unlock_all
+    exit 0
 }
 
 echo "-----------"
