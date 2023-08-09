@@ -58,8 +58,7 @@ function get_download_info() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表: ${len} "
     if [ "$len" -eq 0 ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表为空 "
-        get_paused_queue
-        return
+        exit 0
     fi
     local COUNT=0
     local temp=''
@@ -118,7 +117,7 @@ function resume() {
 
 function lock() {
     $(install -Dm0644 /dev/null "${log_path}/lockfile/_$1.lock")
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已上锁 "
+    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已上锁 "
 }
 function get_lock_status() {
     if [[ -f "${log_path}/lockfile/_$1.lock" ]]; then
@@ -130,7 +129,7 @@ function get_lock_status() {
 }
 function unlock() {
     rm -rf "${log_path}/lockfile/_$1.lock"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已解锁 "
+    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已解锁 "
 }
 
 function unlock_all() {
@@ -190,15 +189,16 @@ function get_free_disk() {
     local free_space_mb=$(expr $free_space_kb / 1024)
     local free_space_gb=$(expr $free_space_mb / 1024)
     local free_space_gb=$(echo ${free_space_gb%.*})
+    # MIN_DIST 到 MAX_DIST 之间作为缓冲
     if [ "$free_space_gb" -le "$MIN_DIST" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB 磁盘空间不足"
         get_downloading_queue
-    fi
-    if [ "$free_space_gb" -gt "$MAX_DIST" ]; then
+    elif [ "$free_space_gb" -gt "$MAX_DIST" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB 磁盘空间充足"
         get_paused_queue
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space_gb}GB 缓冲区"
     fi
-    # MIN_DIST 到 MAX_DIST 之间作为缓冲
 }
 
 
@@ -231,53 +231,54 @@ function sync() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 执行中..."
     while [[ $COUNT -lt $len ]]; do
         # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 遍历第 ${COUNT} 个文件"
-        item=$(echo "$list" | jq ".[$COUNT]")
-        file_name=$(echo "$item" | jq -r '.name')
-        download_path=$(echo "$item" | jq -r '.download_path')
-        save_path=$(echo "$item" | jq -r '.save_path')
-        file_temp_path="${download_path}/${file_name}"
-        file_save_path="${save_path}/${file_name}"
-        source_path="${file_temp_path}"
-        if [[ ! -f "${file_temp_path}" ]]; then
-            source_path="${file_save_path}"
-        fi
 
-        if [[ ! -f "${source_path}" ]]; then
-            # echo "!!!!!!!!!!!!!!!文件不存在!!!!!!!!!!!!!!"
-            # echo "${source_path}"
-            let COUNT++
-            continue
-        fi
-        target_path="${rclone_name}${rclone_remote_dir}${file_name}"
-        local_target_path="${rclone_local_dir}${rclone_remote_dir}${file_name}"
-        if [[ -f "${local_target_path}" ]]; then
-            # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
-            # echo "${local_target_path}"
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
-            rm "${source_path}"
-            let COUNT++
-            continue
-        fi
-        get_lock_status "${source_path}"
-        if [[ ${locked} == "1" ]]; then
-            let COUNT++
-            continue
-        fi
-        let COUNT++
         read -u 6
-        lock "${source_path}"
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 创建线程 ${COUNT} "
+        
         {   
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始同步 ${COUNT} "
-            echo "FROM:"
-            echo "${source_path}"
-            echo "TO:"
-            echo "${target_path}"
-            cmd=$(/usr/bin/rclone -v -P moveto --transfers ${qb_transfers} --log-file "${log_file}" "${source_path}" "${target_path}")
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 创建线程 ${COUNT} "
+            item=$(echo "$list" | jq ".[$COUNT]")
+            file_name=$(echo "$item" | jq -r '.name')
+
+            get_lock_status "${file_name}"
+            if [[ ${locked} == "1" ]]; then
+                break
+            fi
+            lock "${file_name}"
+
+            download_path=$(echo "$item" | jq -r '.download_path')
+            save_path=$(echo "$item" | jq -r '.save_path')
+            file_temp_path="${download_path}/${file_name}"
+            file_save_path="${save_path}/${file_name}"
+            source_path="${file_temp_path}"
+
+            
+            if [[ ! -f "${file_temp_path}" ]]; then
+                source_path="${file_save_path}"
+            fi
+
+            if [[  -f "${source_path}" ]]; then
+                target_path="${rclone_name}${rclone_remote_dir}${file_name}"
+                local_target_path="${rclone_local_dir}${rclone_remote_dir}${file_name}"
+                if [[ ! -f "${local_target_path}" ]]; then
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始同步 ${COUNT} "
+                    echo "FROM:"
+                    echo "${source_path}"
+                    echo "TO:"
+                    echo "${target_path}"
+                    cmd=$(/usr/bin/rclone -v -P moveto --transfers ${qb_transfers} --log-file "${log_file}" "${source_path}" "${target_path}")
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
+                else 
+                    # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
+                    # echo "${local_target_path}"
+                    rm "${source_path}"
+                    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+                fi
+            fi
+            
             unlock "${source_path}"
             echo -ne "\n" 1>&6
         } &
+        let COUNT++
     done
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 等待全部线程结束 "
     wait
@@ -291,8 +292,8 @@ function sync() {
 
 function main() {
     login
-    get_all_info
     get_free_disk
+    get_all_info
     get_download_info
     sync
     unlock_all
