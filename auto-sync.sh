@@ -235,7 +235,7 @@ function sync() {
         read -u 6
         
         {   
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 创建线程 ${COUNT} "
+            # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 创建线程 ${COUNT} "
             item=$(echo "$list" | jq ".[$COUNT]")
             file_name=$(echo "$item" | jq -r '.name')
 
