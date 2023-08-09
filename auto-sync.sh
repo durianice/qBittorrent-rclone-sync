@@ -12,23 +12,27 @@ rclone_local_dir="/opt/GoogleDrive"
 rclone_remote_dir="/media/tv/"
 multi_thread_streams=16
 # Custom Config
-CTRL_TAG="CTRL_BY_SCRIPT"
+
+# 标签
+SYNC_TAG="SYNC"
+CTRL_TAG="CTRL"
+STAY_TAG="STAY"
+
 # 缓冲
 MAX_DIST=9
 MIN_DIST=3
+# 上传线程数
 THREAD=5
-SYNC_ONLY_DLING=1
-# log
-log_path="/opt/qBittorrent/log"
-if [ ! -d "$log_path" ]; then
-    mkdir -p ${log_path}
+
+# 临时目录
+TEMP_PATH="/opt/qBittorrent/temp_dir"
+if [ ! -d "$TEMP_PATH" ]; then
+    mkdir -p ${TEMP_PATH}
 fi
-log_file=${log_path}/qbit_sync_rclone.log
+# 日志文件
+LOG_FILE=${TEMP_PATH}/qbit_sync_rclone.log
 
 ############# Statr #############
-if [ ! -d "$folder" ]; then
-    mkdir -p ${log_path}
-fi
 
 function login() {
     qb_cookie=$(curl -s -i --header "Referer: ${qb_host}" --data "username=${qb_username}&password=${qb_password}" "${qb_host}/api/v2/auth/login" | grep -P -o 'SID=\S{32}')
@@ -42,13 +46,7 @@ function login() {
 
 # 获取所有信息
 function get_all_info() {
-    if [[ $SYNC_ONLY_DLING == 1 ]]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取所有正在下载列表"
-        download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[] | select(.state == "downloading")')
-    else
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] 获取所有列表"
-        download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c '.[]')
-    fi
+    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c --arg tag "$SYNC_TAG" '.[] | select(.tags | contains($tag))')
     download_data=$(echo ${download_data} | sed 's/}/},/g')
     download_data=${download_data%,}
     download_data="[${download_data}]"
@@ -67,15 +65,26 @@ function get_download_info() {
     fi
     local COUNT=0
     local temp=''
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始获取文件详情 "
     while [[ $COUNT -lt $len ]]; do
         item=$(echo "$data" | jq ".[$COUNT]")
         name=$(echo "$item" | jq -r '.name')
         hash=$(echo "$item" | jq -r '.hash')
+        tags=$(echo "$item" | jq -r '.tags')
+        seq_dl=$(echo "$item" | jq -r '.seq_dl')
         progress=$(echo "$item" | jq -r '.progress')
         download_path=$(echo "$item" | jq -r '.download_path')
         save_path=$(echo "$item" | jq -r '.save_path')
-        finished_file=$(curl -s "${qb_host}/api/v2/torrents/files?hash=${hash}" --cookie "${qb_cookie}" | jq -c --arg dp "$download_path" --arg sp "$save_path" '.[] | select(.progress == 1) | . + {download_path: $dp,save_path: $sp}')
+
+        {
+            # 按顺序下载
+            if [[ ${seq_dl} == false ]]; then
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] 非按顺序下载 强制顺序下载 $name"
+                pause ${hash}
+                resume ${hash} ${seq_dl}
+            fi
+        } &
+
+        finished_file=$(curl -s "${qb_host}/api/v2/torrents/files?hash=${hash}" --cookie "${qb_cookie}" | jq -c --arg dp "$download_path" --arg sp "$save_path" --arg tags "$tags" '.[] | select(.progress == 1) | . + {download_path: $dp,save_path: $sp,tags: $tags}')
         temp+="${finished_file}"
         let COUNT++
     done
@@ -120,27 +129,6 @@ function resume() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已恢复 $res "
 }
 
-function lock() {
-    $(install -Dm0644 /dev/null "${log_path}/lockfile/_$1.lock")
-    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已上锁 "
-}
-function get_lock_status() {
-    if [[ -f "${log_path}/lockfile/_$1.lock" ]]; then
-        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
-        locked="1"
-    else 
-        locked="0"
-    fi
-}
-function unlock() {
-    rm -rf "${log_path}/lockfile/_$1.lock"
-    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已解锁 "
-}
-
-function unlock_all() {
-    rm -rf "${log_path}/lockfile/"
-}
-
 function get_downloading_queue() {
     local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL"), select(.state == "queuedDL") | [.name, .hash, .tags] | @csv')
     if [ -z "$res" ]; then
@@ -156,10 +144,10 @@ function get_downloading_queue() {
     done <<<"$res"
 
     for i in "${!map[@]}"; do
-        if [ "${tags_map[$i]}" != "${CTRL_TAG}" ]; then
-            continue
-        else
+        if [ "${tags_map[$i]}" != "*${CTRL_TAG}*" ]; then
             pause ${map[$i]}
+        else
+            continue
         fi
     done
 }
@@ -180,7 +168,7 @@ function get_paused_queue() {
     done <<<"$res"
 
     for i in "${!map[@]}"; do
-        if [ "${tags_map[$i]}" != "${CTRL_TAG}" ]; then
+        if [ "${tags_map[$i]}" != "*${CTRL_TAG}*" ]; then
             continue
         else
             resume ${map[$i]} ${seq_dl_map[$i]}
@@ -206,18 +194,40 @@ function get_free_disk() {
     fi
 }
 
+function lock() {
+    $(install -Dm0644 /dev/null "${TEMP_PATH}/lockfile/_$1.lock")
+    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已上锁 "
+}
+function get_lock_status() {
+    if [[ -f "${TEMP_PATH}/lockfile/_$1.lock" ]]; then
+        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
+        locked="1"
+    else 
+        locked="0"
+    fi
+}
+function unlock() {
+    rm -rf "${TEMP_PATH}/lockfile/_$1.lock"
+    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已解锁 "
+}
 
-# 同步
-function sync() {
-    # 创建计数文件
-    tmp_fifofile="/${log_path}/$$.fifo" 
+function unlock_all() {
+    rm -rf "${TEMP_PATH}/lockfile/"
+}
+
+function generateFifoFile() {
+    tmp_fifofile="${TEMP_PATH}/$$.fifo" 
     mkfifo $tmp_fifofile
     exec 6<>$tmp_fifofile 
     rm $tmp_fifofile
     for ((i=0;i<${THREAD};i++));do
         echo -ne "\n" 1>&6
     done
+}
 
+# 同步
+function sync() {
+    generateFifoFile
     list=${all_done_list}
     local len=$(echo "$list" | jq -c '.|length')
     local COUNT=0
@@ -233,6 +243,7 @@ function sync() {
         {   
             item=$(echo "$list" | jq ".[$COUNT]")
             file_name=$(echo "$item" | jq -r '.name')
+            tags=$(echo "$item" | jq -r '.tags')
             download_path=$(echo "$item" | jq -r '.download_path')
             save_path=$(echo "$item" | jq -r '.save_path')
             file_temp_path="${download_path}/${file_name}"
@@ -255,13 +266,22 @@ function sync() {
                         echo "${source_path}"
                         echo "TO:"
                         echo "${target_path}"
-                        cmd=$(/usr/bin/rclone -v -P moveto --multi-thread-streams ${multi_thread_streams} --log-file "${log_file}" "${source_path}" "${target_path}")
+                        if [[ ${tags} == *${STAY_TAG}* ]]; then
+                            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前标签 ${tags} 保种模式"
+                            cmd=$(/usr/bin/rclone -v -P copyto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_path}" "${target_path}")
+                        else
+                            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 当前标签 ${tags} 不保种"
+                            cmd=$(/usr/bin/rclone -v -P copyto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_path}" "${target_path}")
+                        fi
+                        cmd=$(/usr/bin/rclone -v -P copyto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_path}" "${target_path}")
                         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
                     else 
                         # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
                         # echo "${local_target_path}"
-                        rm "${source_path}"
-                        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+                        if [[ ${tags} != *${STAY_TAG}* ]]; then
+                            rm "${source_path}"
+                            # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+                        fi
                     fi
                     unlock "${source_path}"
                 fi
