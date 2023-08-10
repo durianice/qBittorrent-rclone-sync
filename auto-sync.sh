@@ -169,9 +169,9 @@ function get_paused_queue() {
 
     for i in "${!map[@]}"; do
         if [ "${tags_map[$i]}" != "*${CTRL_TAG}*" ]; then
-            continue
-        else
             resume ${map[$i]} ${seq_dl_map[$i]}
+        else
+            continue
         fi
     done
 }
