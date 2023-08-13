@@ -1,30 +1,4 @@
 #!/bin/bash
-sleep 1
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-PLAIN="\033[0m"
-WHITLE="\033[37m"
-MAGENTA="\033[35m"
-CYAN="\033[36m"
-BLUE="\033[34m"
-BOLD="\033[01m"
-
-error() {
-    echo -e "$RED$BOLD$1$PLAIN"
-}
-
-success() {
-    echo -e "$GREEN$BOLD$1$PLAIN"
-}
-
-warning() {
-    echo -e "$YELLOW$BOLD$1$PLAIN"
-}
-
-info() {
-    echo -e "$PLAIN$BOLD$1$PLAIN"
-}
 
 ############# Global Config #############
 
@@ -40,56 +14,58 @@ multi_thread_streams=16
 # Custom Config
 
 #通知
-BOT_TOKEN="1234:XXXXX"
-CHAT_ID="1234"
+BOT_TOKEN="123:xxx"
+CHAT_ID="123"
 
 # 标签
-SYNC_TAG="SYNC"
-CTRL_TAG="CTRL"
-STAY_TAG="STAY"
+TAG_1="脚本控制"
+TAG_2="启停控制"
+TAG_3="保种"
 
-# 缓冲
-MAX_DIST=9
+# 缓冲 GB
+MAX_DIST=10
 MIN_DIST=3
 # 上传线程数
-THREAD=5
+THREAD=2
 
 # 临时目录
-TEMP_PATH="/opt/qBittorrent/temp_dir"
+TEMP_PATH="/opt/qbittorrent/temp_dir"
 if [ ! -d "$TEMP_PATH" ]; then
     mkdir -p ${TEMP_PATH}
 fi
 # 日志文件
 LOG_FILE=${TEMP_PATH}/qbit_sync_rclone.log
 
+############# Global Config #############
+
 ############# Statr #############
 
 login() {
     qb_cookie=$(curl -s -i --header "Referer: ${qb_host}" --data "username=${qb_username}&password=${qb_password}" "${qb_host}/api/v2/auth/login" | grep -P -o 'SID=\S{32}')
     if [ -n ${qb_cookie} ]; then
-        success "[$(date '+%Y-%m-%d %H:%M:%S')] 登录成功 "
+        log "登录成功 " true
     else
-        error "[$(date '+%Y-%m-%d %H:%M:%S')] 登录失败 "
+        log "登录失败 " true
         exit 1
     fi
 }
 
 # 获取所有信息
-get_all_info() {
-    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c --arg tag "$SYNC_TAG" '.[] | select(.tags | contains($tag))')
+get_all() {
+    download_data=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -c --arg tag "$TAG_1" '.[] | select(.tags | contains($tag))')
     download_data=$(echo ${download_data} | sed 's/}/},/g')
     download_data=${download_data%,}
     download_data="[${download_data}]"
 }
 
 # 获取下载信息
-get_download_info() {
+get_download() {
     all_done_list="[]"
     local data=${download_data}
     local len=$(echo "$data" | jq -c '.|length')
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表: ${len} "
+    log "下载列表: ${len} " true
     if [ "$len" -eq 0 ]; then
-        info "[$(date '+%Y-%m-%d %H:%M:%S')] 下载列表为空 "
+        log "下载列表为空 " true
         return 0
     fi
     local COUNT=0
@@ -99,21 +75,33 @@ get_download_info() {
         name=$(echo "$item" | jq -r '.name')
         hash=$(echo "$item" | jq -r '.hash')
         tags=$(echo "$item" | jq -r '.tags')
+        state=$(echo "$item" | jq -r '.state')
         seq_dl=$(echo "$item" | jq -r '.seq_dl')
         progress=$(echo "$item" | jq -r '.progress')
         download_path=$(echo "$item" | jq -r '.download_path')
+        content_path=$(echo "$item" | jq -r '.content_path')
         save_path=$(echo "$item" | jq -r '.save_path')
+
+        # 移除下载完成的标签
+        if [[ $state == "stalledUP" && ${tags} != *${TAG_3}* ]]; then
+            handle_tag $hash "" "已完成"
+        fi
+
+        # 创建远程目录
+        if [[ -d "${content_path}" ]]; then
+            mkdir -p "${rclone_local_dir}${rclone_remote_dir}${name}"
+        fi
 
         {
             # 按顺序下载
             if [[ ${seq_dl} == false ]]; then
-                warning "[$(date '+%Y-%m-%d %H:%M:%S')] 非按顺序下载 强制顺序下载 $name"
+                log "非按顺序下载 强制顺序下载 $name" true
                 pause ${hash}
                 resume ${hash} ${seq_dl}
             fi
         } &
 
-        finished_file=$(curl -s "${qb_host}/api/v2/torrents/files?hash=${hash}" --cookie "${qb_cookie}" | jq -c --arg dp "$download_path" --arg sp "$save_path" --arg tags "$tags" '.[] | select(.progress == 1) | . + {download_path: $dp,save_path: $sp,tags: $tags}')
+        finished_file=$(curl -s "${qb_host}/api/v2/torrents/files?hash=${hash}" --cookie "${qb_cookie}" | jq -c --arg dp "$download_path" --arg sp "$save_path" --arg tags "$tags" --arg cp "$content_path" --arg hash "$hash" '.[] | select(.progress == 1) | . + {content_path: $cp,download_path: $dp,save_path: $sp,tags: $tags},hash: $hash')
         temp+="${finished_file}"
         let COUNT++
     done
@@ -132,8 +120,7 @@ pause() {
         --compressed \
         --insecure
     local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state, .progress] | @csv')
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 已暂停下载 $res"
-    notify "$(echo "已暂停下载 $res")"
+    log "已暂停下载 $res" true
 }
 
 # 恢复下载
@@ -156,17 +143,16 @@ resume() {
             --insecure
     fi
     local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r --arg hash "$hash" '.[] | select(.hash == $hash) | [.name, .state, .progress] | @csv')
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 已恢复下载 $res"
-    notify "$(echo "已恢复下载 $res")"
+    log "已恢复下载 $res" true
 }
 
 get_downloading_queue() {
     local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "downloading"), select(.state == "forcedDL"), select(.state == "queuedDL") | [.name, .hash, .tags] | @csv')
     if [ -z "$res" ]; then
-        info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前下载&等待下载队列为空"
+        log "当前下载&等待下载队列为空" true
         return
     fi
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前下载&等待下载队列 $res"
+    log "当前下载&等待下载队列 $res" true
     local -A hash_map
     local -A tags_map
     while IFS=',' read name hash tags; do
@@ -175,7 +161,7 @@ get_downloading_queue() {
     done <<<"$res"
 
     for i in "${!hash_map[@]}"; do
-        if [ "${tags_map[$i]}" != "*${CTRL_TAG}*" ]; then
+        if [ "${tags_map[$i]}" != "*${TAG_2}*" ]; then
             pause ${hash_map[$i]}
         else
             continue
@@ -185,10 +171,10 @@ get_downloading_queue() {
 get_paused_queue() {
     local res=$(curl -s "${qb_host}/api/v2/torrents/info" --cookie "${qb_cookie}" | jq -r '.[] | select(.state == "pausedDL") | [.name, .hash, .tags, .seq_dl] | @csv')
     if [ -z "$res" ]; then
-        info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前暂停队列为空"
+        log "当前暂停队列为空" true
         return
     fi
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前暂停队列 $res"
+    log "当前暂停队列 $res" true
     local -A hash_map
     local -A tags_map
     local -A seq_dl_map
@@ -199,12 +185,27 @@ get_paused_queue() {
     done <<<"$res"
 
     for i in "${!hash_map[@]}"; do
-        if [ "${tags_map[$i]}" != "*${CTRL_TAG}*" ]; then
+        if [ "${tags_map[$i]}" != "*${TAG_2}*" ]; then
             resume ${hash_map[$i]} ${seq_dl_map[$i]}
         else
             continue
         fi
     done
+}
+
+function handle_tag(){
+    hash=$1
+    old_tag=$2
+    new_tag=$3
+    if [[ "${old_tag}" ]]; then
+        curl -s -X POST -d "hashes=${hash}&tags=${old_tag}" "${qb_host}/api/v2/torrents/removeTags" --cookie "${qb_cookie}"
+    else
+        curl -s -X POST -d "hashes=${hash}" "${qb_host}/api/v2/torrents/removeTags" --cookie "${qb_cookie}"
+    fi
+    
+    if [[ "${new_tag}" ]]; then
+        curl -s -X POST -d "hashes=${hash}&tags=${new_tag}" "${qb_host}/api/v2/torrents/addTags" --cookie "${qb_cookie}"
+    fi
 }
 
 get_space() {
@@ -231,23 +232,23 @@ get_space() {
 get_free_disk() {
     local free_space=$(get_space "/" "GB")
     if [ "$free_space" -le "$MIN_DIST" ]; then
-        warning "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space}GB 磁盘空间不足"
+        log "当前磁盘空间 ${free_space}GB 磁盘空间不足" true
         get_downloading_queue
     elif [ "$free_space" -gt "$MAX_DIST" ]; then
-        success "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space}GB 磁盘空间充足"
+        log "当前磁盘空间 ${free_space}GB 磁盘空间充足" true
         get_paused_queue
     else
-        info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前磁盘空间 ${free_space}GB 缓冲区"
+        log "当前磁盘空间 ${free_space}GB 缓冲区" true
     fi
 }
 
 lock() {
     $(install -Dm0644 /dev/null "${TEMP_PATH}/lockfile/_$1.lock")
-    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已上锁 "
+    # echo "${1} 已上锁 "
 }
 get_lock_status() {
     if [[ -f "${TEMP_PATH}/lockfile/_$1.lock" ]]; then
-        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 锁定中 "
+        # echo "${1} 锁定中 "
         locked="1"
     else 
         locked="0"
@@ -255,7 +256,7 @@ get_lock_status() {
 }
 unlock() {
     rm -rf "${TEMP_PATH}/lockfile/_$1.lock"
-    # echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${1} 已解锁 "
+    # echo "${1} 已解锁 "
 }
 
 unlock_all() {
@@ -273,8 +274,17 @@ generate_fifo_file() {
 }
 
 notify() {
-    local content=$1
-    curl -s -d "{\"chat_id\":${CHAT_ID}, \"text\":\"${content}\", \"parse_mode\": \"Markdown\"}" -H "Content-Type: application/json" -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
+    local content=$(echo "$1")
+    local cmd=$(curl -s -d "{\"chat_id\":${CHAT_ID}, \"text\":\"${content}\", \"parse_mode\": \"Markdown\"}" -H "Content-Type: application/json" -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage")
+}
+
+log() {
+    local content="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    local notify=$2
+    if [[ $notify == true ]];then
+        notify "$content"
+    fi
+    echo "$content"
 }
 
 # 同步
@@ -283,60 +293,53 @@ sync() {
     list=${all_done_list}
     local len=$(echo "$list" | jq -c '.|length')
     local COUNT=0
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 已下载完成的文件数: ${len} "
+    log "已下载完成的文件数: ${len} " true
     if [[ ${len} == 0 ]]; then
         return 0
     fi
     local start_time=$(date +%s)
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行同步任务 并发数 ${THREAD}"
-    info "[$(date '+%Y-%m-%d %H:%M:%S')] 执行中..."
+    log "开始执行同步任务 并发数 ${THREAD}" true
+    log "执行中..." true
     while [[ $COUNT -lt $len ]]; do
         read -u 6
         {   
-            item=$(echo "$list" | jq ".[$COUNT]")
-            file_name=$(echo "$item" | jq -r '.name')
-            tags=$(echo "$item" | jq -r '.tags')
-            download_path=$(echo "$item" | jq -r '.download_path')
-            save_path=$(echo "$item" | jq -r '.save_path')
-            file_temp_path="${download_path}/${file_name}"
-            file_save_path="${save_path}/${file_name}"
-            source_path="${file_temp_path}"
+            local item=$(echo "$list" | jq ".[$COUNT]")
+            local file_name=$(echo "$item" | jq -r '.name')
+            local tags=$(echo "$item" | jq -r '.tags')
+            local hash=$(echo "$item" | jq -r '.hash')
+            local download_path=$(echo "$item" | jq -r '.download_path')
+            local save_path=$(echo "$item" | jq -r '.save_path')
+            local file_temp_path="${download_path}/${file_name}"
+            local file_save_path="${save_path}/${file_name}"
+            local source_file="${file_temp_path}"
 
             if [[ ! -f "${file_temp_path}" ]]; then
-                source_path="${file_save_path}"
+                source_file="${file_save_path}"
             fi
 
-            if [[ -f "${source_path}" ]]; then
+            if [[ -f "${source_file}" ]]; then
                 get_lock_status "${file_name}"
                 if [[ ${locked} == "0" ]]; then
                     lock "${file_name}"
-                    target_path="${rclone_name}${rclone_remote_dir}${file_name}"
-                    local_target_path="${rclone_local_dir}${rclone_remote_dir}${file_name}"
-                    if [[ ! -f "${local_target_path}" ]]; then
-                        info "[$(date '+%Y-%m-%d %H:%M:%S')] 开始同步 ${COUNT} "
-                        info "FROM:"
-                        info "${source_path}"
-                        info "TO:"
-                        info "${target_path}"
-                        if [[ ${tags} == *${STAY_TAG}* ]]; then
-                            info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前标签 ${tags} 保种模式"
-                            cmd=$(/usr/bin/rclone -v -P copyto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_path}" "${target_path}")
+                    target_file="${rclone_name}${rclone_remote_dir}${file_name}"
+                    local_target_file="${rclone_local_dir}${rclone_remote_dir}${file_name}"
+                    if [[ ! -f "${local_target_file}" ]]; then
+                        log "开始同步 ${COUNT} " true
+                        if [[ ${tags} == *${TAG_3}* ]]; then
+                            log "当前标签 ${tags} 保种模式" true
+                            local cmd=$(/usr/bin/rclone -v -P copyto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_file}" "${target_file}")
                         else
-                            info "[$(date '+%Y-%m-%d %H:%M:%S')] 当前标签 ${tags} 不保种"
-                            cmd=$(/usr/bin/rclone -v -P moveto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_path}" "${target_path}")
+                            log "当前标签 ${tags} 不保种" true
+                            local cmd=$(/usr/bin/rclone -v -P moveto --multi-thread-streams ${multi_thread_streams} --log-file "${LOG_FILE}" "${source_file}" "${target_file}")
                         fi
-                        success "[$(date '+%Y-%m-%d %H:%M:%S')] 同步完成 ${COUNT} "
-                        notify "$(echo "${COUNT} 同步完成 ${file_name}")"
+                        log "${COUNT} 同步完成 ${file_name}" true
                     else 
-                        # echo "!!!!!!!!!!!!!!!文件已存在!!!!!!!!!!!!!!"
-                        # echo "${local_target_path}"
-                        if [[ ${tags} != *${STAY_TAG}* ]]; then
-                            rm "${source_path}"
-                            notify "$(echo "已删除原种 ${source_path}")"
-                            # echo "[$(date '+%Y-%m-%d %H:%M:%S')] 移除已同步文件 ${COUNT} "
+                        if [[ ${tags} != *${TAG_3}* ]]; then
+                            rm "${source_file}"
+                            log "已删除原种 ${source_file}" true
                         fi
                     fi
-                    unlock "${source_path}"
+                    unlock "${file_name}"
                 fi
             fi
             echo -ne "\n" 1>&6
@@ -347,8 +350,7 @@ sync() {
     exec 6>&-
     local end_time=$(date +%s)
     local duration=$(( end_time - start_time ))
-    success "[$(date '+%Y-%m-%d %H:%M:%S')] 同步任务执行结束 耗时 ${duration} 秒"
-    notify "$(echo "本次同步任务执行结束 耗时 ${duration} 秒, 剩余空间 $(get_space "/" "GB") GB")"
+    log "本次同步任务执行结束 耗时 ${duration} 秒, 剩余空间 $(get_space "/" "GB") GB" true
 }
 
 main() {
@@ -359,8 +361,8 @@ main() {
         exit 0
     fi
     lock "sync_task"
-    get_all_info
-    get_download_info
+    get_all
+    get_download
     sync
     unlock "sync_task"
     unlock_all
