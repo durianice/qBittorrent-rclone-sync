@@ -6,7 +6,7 @@ import (
 	"qbittorrentRcloneSync/util"
 )
 
-var host string = ""
+const host = "http://127.0.0.1:8080"
 
 func Login() {
 	url := host + "/api/v2/auth/login"
@@ -41,4 +41,28 @@ func GetDetail(hash string) ([]map[string]interface{}) {
 	res, _ := util.Get(url, h, p)
 	list := util.ParseJsonStr(res)
 	return list
+}
+
+func Resume(hash string) {
+	url := host + "/api/v2/torrents/resume"
+	h := make(map[string]string)
+	h["Referer"] = host
+	p := make(map[string]string)
+	p["hashes"] = hash
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("恢复下载失败") 
+	} 
+}
+
+func Pause(hash string) {
+	url := host + "/api/v2/torrents/pause"
+	h := make(map[string]string)
+	h["Referer"] = host
+	p := make(map[string]string)
+	p["hashes"] = hash
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("暂停下载失败") 
+	} 
 }

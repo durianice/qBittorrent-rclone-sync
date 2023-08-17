@@ -4,9 +4,129 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"os"
+	"os/exec"
 	"reflect"
+	"runtime"
 	"strconv"
+	"strings"
 )
+
+func ParseJsonStr(jsonStr string) ([]map[string]interface{}) {
+
+	var unknownObjects []json.RawMessage
+
+	err := json.Unmarshal([]byte(jsonStr), &unknownObjects)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil
+	}
+
+	var array []map[string]interface{}
+
+	for _, rawMsg := range unknownObjects {
+		var obj map[string]interface{}
+		err := json.Unmarshal(rawMsg, &obj)
+		if err != nil {
+			fmt.Println("Error:", err)
+			continue
+		}
+
+		array = append(array, obj)
+	}
+
+	// fmt.Println("Parsed objects:", array)
+
+	return array
+}
+
+func RunShellCommand(command string) (string, error) {
+	cmd := exec.Command("bash", "-c", command)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
+
+func Env() {
+	switch runtime.GOOS {
+		case "windows":
+			panic("Windows not support")
+		case "linux":
+			fmt.Println("Running on Linux")
+		case "darwin":
+			panic("MacOS not support")
+		default:
+			panic("Current OS not support")
+	}
+}
+
+func FileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false // 无法确定文件是否存在
+}
+
+func CreateDirIfNotExist(dirPath string) {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.MkdirAll(dirPath, 0755)
+		if err != nil {
+			fmt.Printf("Create '%v' Error : %v", dirPath, err)
+			os.Exit(1)
+		}
+		fmt.Println("Directory created:", dirPath)
+	} else {
+		fmt.Println("Directory already exists:", dirPath)
+	}
+}
+
+
+func GetFreeSpace(dir string, unit string) (int, error) {
+	out, err := exec.Command("df", "--output=avail", dir).Output()
+	if err != nil {
+		return 0, err
+	}
+
+	freeSpaceKBStr := strings.TrimSpace(string(out))
+	freeSpaceKB := 0
+	fmt.Sscanf(freeSpaceKBStr, "%d", &freeSpaceKB)
+
+	switch unit {
+	case "KB":
+		return freeSpaceKB, nil
+	case "MB":
+		return freeSpaceKB / 1024, nil
+	case "GB":
+		return freeSpaceKB / 1024 / 1024, nil
+	default:
+		return 0, fmt.Errorf("unsupported unit: %s", unit)
+	}
+}
+
+func Filter[T any](array []T, condition func(T) bool) []T {
+	var result []T
+	for _, item := range array {
+		if condition(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func Map[T any](array []T, mapper func(T) T) []T {
+	var result []T
+	for _, item := range array {
+		result = append(result, mapper(item))
+	}
+	return result
+}
 
 func toString(i interface{}) (string, error) {
 	i = indirectToStringerOrError(i)
@@ -76,35 +196,6 @@ func indirectToStringerOrError(a interface{}) interface{} {
 		v = v.Elem()
 	}
 	return v.Interface()
-}
-
-
-func ParseJsonStr(jsonStr string) ([]map[string]interface{}) {
-
-	var unknownObjects []json.RawMessage
-
-	err := json.Unmarshal([]byte(jsonStr), &unknownObjects)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return nil
-	}
-
-	var array []map[string]interface{}
-
-	for _, rawMsg := range unknownObjects {
-		var obj map[string]interface{}
-		err := json.Unmarshal(rawMsg, &obj)
-		if err != nil {
-			fmt.Println("Error:", err)
-			continue
-		}
-
-		array = append(array, obj)
-	}
-
-	// fmt.Println("Parsed objects:", array)
-
-	return array
 }
 
 
