@@ -131,11 +131,12 @@ func PercentageToDecimal(percentageStr string) (float64, error) {
 }
 
 func MeasureExecutionTime(function func()) time.Duration {
-	startTime := time.Now()
-	function()
-	endTime := time.Now()
-	elapsed := endTime.Sub(startTime)
-	return elapsed
+    startTime := time.Now()
+    function()
+    endTime := time.Now()
+    elapsed := endTime.Sub(startTime)
+    elapsedSeconds := elapsed.Seconds()
+    return time.Duration(elapsedSeconds) * time.Second
 }
 
 func GetRealAbsolutePath() (string) {

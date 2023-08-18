@@ -178,8 +178,8 @@ func main() {
 	}()
 	for {
 		util.SendByTelegramBot(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage()))
-		elapsed := util.MeasureExecutionTime(mainTask)
-		util.SendByTelegramBot(fmt.Sprintf("运行结束 本次耗时 %f s", elapsed.Seconds()))
+		sec := util.MeasureExecutionTime(mainTask)
+		util.SendByTelegramBot(fmt.Sprintf("运行结束 本次耗时 %v", sec))
 		time.Sleep(60 * time.Second)
 	}
 }
