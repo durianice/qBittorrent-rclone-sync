@@ -3,8 +3,8 @@ package util
 import "fmt"
 
 const (
-	CHAT_ID = "123"
-	BOT_TOKEN = "123:qqq"
+	CHAT_ID = "111"
+	BOT_TOKEN = "111:aaa"
 )
 
 

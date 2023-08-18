@@ -45,6 +45,8 @@ func RunShellCommand(command string) (string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Println("Error:", err) 
+		fmt.Println("Error cmd:", command)
 		return "", err
 	}
 	return string(output), nil
@@ -89,12 +91,8 @@ func CreateDirIfNotExist(dirPath string) {
 
 
 func GetFreeSpace(dir string, unit string) (int, error) {
-	out, err := exec.Command("df", "--output=avail", dir).Output()
-	if err != nil {
-		return 0, err
-	}
-
-	freeSpaceKBStr := strings.TrimSpace(string(out))
+	command := fmt.Sprintf("df --output=avail %v | tail -n 1", dir)
+	freeSpaceKBStr, _ := RunShellCommand(command)
 	freeSpaceKB := 0
 	fmt.Sscanf(freeSpaceKBStr, "%d", &freeSpaceKB)
 
@@ -108,6 +106,25 @@ func GetFreeSpace(dir string, unit string) (int, error) {
 	default:
 		return 0, fmt.Errorf("unsupported unit: %s", unit)
 	}
+}
+
+func GetUsedSpacePercentage() string {
+	command := fmt.Sprintf("df --output=pcent %v | tail -n 1", "/")
+	usedStr, _ := RunShellCommand(command)
+	return usedStr
+}
+
+func PercentageToDecimal(percentageStr string) (float64, error) {
+	percentageStr = strings.ReplaceAll(percentageStr, " ", "") 
+	percentageStr = strings.ReplaceAll(percentageStr, "\n", "") 
+	percentageStr = strings.TrimRight(percentageStr, "%")
+	percentage, err := strconv.ParseFloat(percentageStr, 64)
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+	decimal := percentage / 100
+	return decimal, nil
 }
 
 func Filter[T any](array []T, condition func(T) bool) []T {

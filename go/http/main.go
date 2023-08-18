@@ -66,3 +66,15 @@ func Pause(hash string) {
 		log.Fatal("暂停下载失败") 
 	} 
 }
+
+func ToggleSequentialDownload(hash string) {
+	url := host + "/api/v2/torrents/toggleSequentialDownload"
+	h := make(map[string]string)
+	h["Referer"] = host
+	p := make(map[string]string)
+	p["hashes"] = hash
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("切换下载类型失败") 
+	} 
+}
