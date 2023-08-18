@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"log"
 	"qbittorrentRcloneSync/util"
 )
@@ -18,8 +17,7 @@ func Login() {
 	res, _ := util.PostForm(url, h, p)
 	if res == "Fails." {
 		log.Fatal("登录失败") 
-	} 
-	fmt.Println("登录成功")
+	}
 }
 
 func GetInfo() ([]map[string]interface{}) {

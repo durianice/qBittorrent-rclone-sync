@@ -1,0 +1,11 @@
+RCLONE_NAME="gdrive:"
+RCLONE_LOCAL_DIR="/opt/GoogleDrive"
+RCLONE_REMOTE_DIR="/media/tv/"
+MULTI_THREAD_STREAMS="10"
+TEMP_PATH="/opt/qbittorrent/temp_dir"
+LOG_FILE=TEMP_PATH+"/qbit_sync_rclone.log"
+TAG_1="脚本控制"
+TAG_2="保种"
+THREAD=10
+CHAT_ID="123456"
+BOT_TOKEN="123456:abcdef"

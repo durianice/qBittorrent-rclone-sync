@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func ParseJsonStr(jsonStr string) ([]map[string]interface{}) {
@@ -111,6 +112,8 @@ func GetFreeSpace(dir string, unit string) (int, error) {
 func GetUsedSpacePercentage() string {
 	command := fmt.Sprintf("df --output=pcent %v | tail -n 1", "/")
 	usedStr, _ := RunShellCommand(command)
+	usedStr = strings.ReplaceAll(usedStr, " ", "") 
+	usedStr = strings.ReplaceAll(usedStr, "\n", "") 
 	return usedStr
 }
 
@@ -125,6 +128,20 @@ func PercentageToDecimal(percentageStr string) (float64, error) {
 	}
 	decimal := percentage / 100
 	return decimal, nil
+}
+
+func MeasureExecutionTime(function func()) time.Duration {
+	startTime := time.Now()
+	function()
+	endTime := time.Now()
+	elapsed := endTime.Sub(startTime)
+	return elapsed
+}
+
+func GetRealAbsolutePath() (string) {
+	res, _ := RunShellCommand("pwd")
+	res = strings.ReplaceAll(res, "\n", "") 
+	return res
 }
 
 func Filter[T any](array []T, condition func(T) bool) []T {
