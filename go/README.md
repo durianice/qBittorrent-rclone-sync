@@ -31,7 +31,8 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorr
 - Telegram机器人通知
 
 ## 注意事项
-目前版本添加tracker后需要手动添加并打上标签<脚本控制>
+- 启用脚本控制后会自动勾选<按顺序下载>保证磁盘不被未完成资源占坑
+- 目前版本添加tracker后需要手动添加并打上标签<脚本控制>
 
 ## Todo
 - [ ] qBittorrent自动打标签
