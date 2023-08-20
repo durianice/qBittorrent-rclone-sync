@@ -1,3 +1,9 @@
+### 修改完成后保存
+### 如果你不确定配置
+### 可以等安装程序运行完成
+### 手动编辑 vim /usr/local/bin/config.env
+### 再重启qbrs
+
 # rclone挂载名称
 RCLONE_NAME="gdrive:"
 
