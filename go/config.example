@@ -1,11 +1,30 @@
+# rclone挂载名称
 RCLONE_NAME="gdrive:"
+
+# rclone本地挂载目录
 RCLONE_LOCAL_DIR="/opt/GoogleDrive"
+
+# 远程资源保存路径(自定义但必须以 "/" 结尾)
 RCLONE_REMOTE_DIR="/media/tv/"
+
+# rclone命令参数
 MULTI_THREAD_STREAMS="10"
+
+# 程序运行临时目录
 TEMP_PATH="/opt/qbittorrent/temp_dir"
+
+# 程序运行日志
 LOG_FILE=TEMP_PATH+"/qbit_sync_rclone.log"
+
+# 需要在qBittorrent客户端增加对应标签并打上TAG_1
 TAG_1="脚本控制"
+
+# 需要保种时添加这个标签
 TAG_2="保种"
+
+# rclone同步到远程并发线程数(量力而行)
 THREAD=10
+
+# Telegram Bot通知
 CHAT_ID="123456"
 BOT_TOKEN="123456:abcdef"

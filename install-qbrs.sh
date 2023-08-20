@@ -1,19 +1,27 @@
 #!/bin/bash
 
 if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
+    if ! command -v wget &>/dev/null; then
+        echo "请先安装 wget"
+        exit 1
+    fi
+    if ! command -v vim &>/dev/null; then
+        echo "请先安装 vim"
+        exit 1
+    fi
+    cd ~
+    wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/v1.0.0/qbrs"
+    wget -O config.env https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
+    vim config.env
 
-    cd ./go
     if [[ ! -f "config.env" ]]; then
-        echo "请先运行以下命令"
-        echo "cd go && cp config.example config.env && vim config.env"
+        echo "配置文件config.env 不存在"
         exit 1
     fi
 
-    go get
-    go build -o qbrs -v main.go
-
     mv qbrs /usr/local/bin/
-    cp config.env /usr/local/bin/
+    mv config.env /usr/local/bin/
+
     echo "[Unit]
     Description=qBittorrent-rclone-sync
     After=network.target
