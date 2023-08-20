@@ -3,9 +3,10 @@ package http
 import (
 	"log"
 	"qbittorrentRcloneSync/util"
+	"os"
 )
 
-const host = "http://127.0.0.1:8080"
+const host = os.Getenv("QBIT_URL")
 
 func Login() {
 	url := host + "/api/v2/auth/login"
