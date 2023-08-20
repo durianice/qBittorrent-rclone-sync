@@ -4,6 +4,9 @@
 ### 手动编辑 vim /usr/local/bin/config.env
 ### 再重启qbrs
 
+# qbittorrent路径(示例为本机)
+QBIT_URL="http://127.0.0.1:8080"
+
 # rclone挂载名称
 RCLONE_NAME="gdrive:"
 
