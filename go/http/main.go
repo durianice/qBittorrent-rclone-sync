@@ -6,7 +6,11 @@ import (
 	"os"
 )
 
-const host = os.Getenv("QBIT_URL")
+var host string = "http://127.0.0.1:8080"
+
+func init() {
+	host = os.Getenv("QBIT_URL")
+}
 
 func Login() {
 	url := host + "/api/v2/auth/login"
