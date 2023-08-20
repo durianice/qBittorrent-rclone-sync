@@ -13,12 +13,12 @@
 
 ## 安装运行
 ```
-wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/main/install-qbrs.sh && bash install-qbrs.sh
+wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/install-qbrs.sh && bash install-qbrs.sh
 ```
 
 ## 卸载
 ```
-wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/main/uninstall-qbrs.sh && bash uninstall-qbrs.sh
+wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh && bash uninstall-qbrs.sh
 ```
 
 ## 参考配置文件
