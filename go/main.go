@@ -123,9 +123,11 @@ func mainTask() {
 					continue
 				}
 			}
-			if util.FileExists(localTargetPath) && util.FileExists(sourcePath) && !strings.Contains(tags, TAG_2) {
-				command := fmt.Sprintf("sudo rm -r %q", subName)
-				util.RunShellCommand(command)
+			if util.FileExists(localTargetPath) {
+				if util.FileExists(sourcePath) && !strings.Contains(tags, TAG_2) {
+					command := fmt.Sprintf("sudo rm %q", sourcePath)
+					util.RunShellCommand(command)
+				}
 				continue
 			}
 			ch <- struct{}{}

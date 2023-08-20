@@ -21,6 +21,7 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
 
     mv qbrs /usr/local/bin/
     mv config.env /usr/local/bin/
+    chmod +x /usr/local/bin/qbrs
 
     echo "[Unit]
     Description=qBittorrent-rclone-sync
@@ -29,7 +30,7 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
     [Service]
     ExecStart=/usr/local/bin/qbrs
     WorkingDirectory=/usr/local/bin/
-    Restart=always
+    Restart=on-abnormal
 
     [Install]
     WantedBy=default.target" > /etc/systemd/system/qbrs.service
@@ -39,13 +40,11 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
     systemctl enable qbrs
 fi
 
+echo "======== QBRS ========"
 echo "启动 systemctl start qbrs"
-echo ""
 echo "停止 systemctl stop qbrs"
-echo ""
 echo "状态 systemctl status qbrs"
-echo ""
 echo "开机自启 systemctl enable qbrs"
-echo ""
 echo "禁用自启 systemctl disable qbrs"
-echo ""
+echo "更多https://github.com/CCCOrz/qBittorrent-rclone-sync/tree/release/go"
+echo "======== QBRS ========"
