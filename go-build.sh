@@ -29,6 +29,9 @@
 #     echo "${result}"
 # }
 cd go
+if [[ -d "build" ]]; then
+    rm -r build
+fi
 archs=(amd64 arm64 arm ppc64le ppc64 s390x) 
 for arch in ${archs[@]} 
 do

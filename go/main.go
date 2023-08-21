@@ -59,6 +59,7 @@ func memoryControl() string {
 func getList() ([]map[string]interface{}) {
 	http.Login()
 	list := http.GetInfo()
+	// 按标签过滤
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
 		return strings.Contains(obj["tags"].(string), TAG_1)
 	})
@@ -70,6 +71,7 @@ func getList() ([]map[string]interface{}) {
 		state, _ := obj["state"].(string)
 		downloadPath, _ := obj["download_path"].(string)
 		savePath, _ := obj["save_path"].(string)
+		// 过滤已下载完成的子内容
 		subListDownloaded := util.Filter(http.GetDetail(hash), func(obj map[string]interface{}) bool {
 			return obj["progress"].(float64) == 1
 		})
@@ -120,6 +122,7 @@ func mainTask() {
 			if !util.FileExists(sourcePath) {
 				sourcePath = savePath + "/" + subName
 				if !util.FileExists(sourcePath) {
+					fmt.Printf("%v\n未找到资源，跳过", sourcePath)
 					continue
 				}
 			}
@@ -128,6 +131,7 @@ func mainTask() {
 					command := fmt.Sprintf("sudo rm %q", sourcePath)
 					util.RunShellCommand(command)
 				}
+				fmt.Printf("%v\n云盘已有该资源，跳过", sourcePath)
 				continue
 			}
 			ch <- struct{}{}
@@ -141,7 +145,6 @@ func mainTask() {
 					util.SendByTelegramBot(fmt.Sprintf("名称 %s\n同步错误 (%v/%v)\n错误原因：%s", name, index + 1, downloadedLen, err))
 				}
 			}(sourcePath, targetPath, tags, &wg, ch, index)
-			
 		}
 	}
 	wg.Wait()
@@ -175,6 +178,7 @@ func main() {
 			select {
 				case <-ticker.C:
 					qBitList = getList()
+					fmt.Printf("获取到%v条信息", len(qBitList))
 				}
 		}
 	}()

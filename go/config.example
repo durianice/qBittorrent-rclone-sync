@@ -7,6 +7,9 @@
 # qbittorrent路径(浏览器访问的真实地址，本机默认127.0.0.1:端口就好。结尾不用 "/")
 QBIT_URL="http://127.0.0.1:8080"
 
+QBIT_USER="admin"
+QBIT_PASSWD="adminadmin"
+
 # rclone挂载名称
 RCLONE_NAME="gdrive:"
 

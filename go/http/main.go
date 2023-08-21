@@ -6,13 +6,40 @@ import (
 	"qbittorrentRcloneSync/util"
 )
 
+var (
+	host string
+	user string
+	password string
+)
+
+func getHost() string {
+	if host == "" {
+		host = os.Getenv("QBIT_URL")
+	}
+    return host
+}
+
+func getUser() string {
+	if user == "" {
+		user = os.Getenv("QBIT_USER")
+	}
+    return user
+}
+
+func getPasswd() string {
+	if password == "" {
+		password = os.Getenv("QBIT_PASSWD")
+	}
+    return password
+}
+
 func Login() {
-	url := os.Getenv("QBIT_URL") + "/api/v2/auth/login"
+	url := getHost() + "/api/v2/auth/login"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]string)
-	p["username"] = "admin"
-	p["password"] = "adminadmin"
+	p["username"] = getUser()
+	p["password"] = getPasswd()
 	res, _ := util.PostForm(url, h, p)
 	if res == "Fails." {
 		log.Fatal("登录失败") 
@@ -20,9 +47,9 @@ func Login() {
 }
 
 func GetInfo() ([]map[string]interface{}) {
-	url := os.Getenv("QBIT_URL") + "/api/v2/torrents/info"
+	url := getHost() + "/api/v2/torrents/info"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]interface{})
 	res, _ := util.Get(url, h, p)
 	list := util.ParseJsonStr(res)
@@ -30,9 +57,9 @@ func GetInfo() ([]map[string]interface{}) {
 }
 
 func GetDetail(hash string) ([]map[string]interface{}) {
-	url := os.Getenv("QBIT_URL") + "/api/v2/torrents/files"
+	url := getHost() + "/api/v2/torrents/files"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]interface{})
 	p["hash"] = hash
 	res, _ := util.Get(url, h, p)
@@ -41,9 +68,9 @@ func GetDetail(hash string) ([]map[string]interface{}) {
 }
 
 func Resume(hash string) {
-	url := os.Getenv("QBIT_URL") + "/api/v2/torrents/resume"
+	url := getHost() + "/api/v2/torrents/resume"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]string)
 	p["hashes"] = hash
 	_, err := util.PostForm(url, h, p)
@@ -53,9 +80,9 @@ func Resume(hash string) {
 }
 
 func Pause(hash string) {
-	url := os.Getenv("QBIT_URL") + "/api/v2/torrents/pause"
+	url := getHost() + "/api/v2/torrents/pause"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]string)
 	p["hashes"] = hash
 	_, err := util.PostForm(url, h, p)
@@ -65,9 +92,9 @@ func Pause(hash string) {
 }
 
 func ToggleSequentialDownload(hash string) {
-	url := os.Getenv("QBIT_URL") + "/api/v2/torrents/toggleSequentialDownload"
+	url := getHost() + "/api/v2/torrents/toggleSequentialDownload"
 	h := make(map[string]string)
-	h["Referer"] = os.Getenv("QBIT_URL")
+	h["Referer"] = getHost()
 	p := make(map[string]string)
 	p["hashes"] = hash
 	_, err := util.PostForm(url, h, p)
