@@ -11,7 +11,7 @@
 本机 Ubuntu 20.04 / 2CPU / 1GB RAM / 硬盘40GB
 
 
-## 安装运行
+## 安装
 ```
 wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/install-qbrs.sh && bash install-qbrs.sh
 ```
@@ -21,12 +21,10 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorr
 wget -N --no-check-certificate https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh && bash uninstall-qbrs.sh
 ```
 
-## 本地编译
+## 手动编译
 ```
 git clone -b release https://github.com/CCCOrz/qBittorrent-rclone-sync.git
-cd go
-go get 
-go build -o qbrs -v main.go
+sudo bash go-build.sh
 ```
 
 ## 参考配置文件

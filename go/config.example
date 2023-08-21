@@ -1,10 +1,10 @@
 ### 修改完成后保存
 ### 如果你不确定配置
 ### 可以等安装程序运行完成
-### 手动编辑 vim /usr/local/bin/config.env
+### 手动编辑/usr/local/bin/config.env
 ### 再重启qbrs
 
-# qbittorrent路径(示例为本机)
+# qbittorrent路径(浏览器访问的真实地址，本机默认127.0.0.1:端口就好。结尾不用 "/")
 QBIT_URL="http://127.0.0.1:8080"
 
 # rclone挂载名称
@@ -13,25 +13,25 @@ RCLONE_NAME="gdrive:"
 # rclone本地挂载目录
 RCLONE_LOCAL_DIR="/opt/GoogleDrive"
 
-# 远程资源保存路径(自定义但必须以 "/" 结尾)
+# 远程资源保存路径(自定义但必须以 "/" 结尾，示例为 媒体/电视剧)
 RCLONE_REMOTE_DIR="/media/tv/"
 
-# rclone命令参数
+# rclone命令参数(一般不需要改)
 MULTI_THREAD_STREAMS="10"
 
-# 程序运行临时目录
+# 程序运行临时目录(一般不需要改)
 TEMP_PATH="/opt/qbittorrent/temp_dir"
 
-# 程序运行日志
+# 程序运行日志(一般不需要改)
 LOG_FILE=TEMP_PATH+"/qbit_sync_rclone.log"
 
-# 需要在qBittorrent客户端增加对应标签并打上TAG_1
+# 需要在qBittorrent客户端增加对应标签并打上勾
 TAG_1="脚本控制"
 
 # 需要保种时添加这个标签
 TAG_2="保种"
 
-# rclone同步到远程并发线程数(量力而行)
+# rclone同步到远程并发线程数(根据实际情况修改，CPU不行就改小)
 THREAD=10
 
 # Telegram Bot通知
