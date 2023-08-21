@@ -23,7 +23,7 @@ MULTI_THREAD_STREAMS="10"
 TEMP_PATH="/opt/qbittorrent/temp_dir"
 
 # 程序运行日志(一般不需要改)
-LOG_FILE=TEMP_PATH+"/qbit_sync_rclone.log"
+LOG_FILE="qbit_rclone_sync.log"
 
 # 需要在qBittorrent客户端增加对应标签并打上勾
 TAG_1="脚本控制"

@@ -42,8 +42,9 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
         exit 1
     fi
     type=$(get_platform)
+    filename="qbrs_${type}"
     cd ~
-    wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/v1.0.0/qbrs_${type}"
+    wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/v1.0.0/$filename"
     wget -O config.env https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
     vim config.env
 
@@ -52,16 +53,16 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
         exit 1
     fi
 
-    mv qbrs /usr/local/bin/
+    mv $filename /usr/local/bin/
     mv config.env /usr/local/bin/
-    chmod +x /usr/local/bin/qbrs
+    chmod +x "/usr/local/bin/$filename"
 
     echo "[Unit]
     Description=qBittorrent-rclone-sync
     After=network.target
 
     [Service]
-    ExecStart=/usr/local/bin/qbrs
+    ExecStart=/usr/local/bin/$filename
     WorkingDirectory=/usr/local/bin/
     Restart=on-abnormal
 

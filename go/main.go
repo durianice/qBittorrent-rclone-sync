@@ -158,7 +158,7 @@ func getConfig() {
 	RCLONE_REMOTE_DIR = os.Getenv("RCLONE_REMOTE_DIR")
 	MULTI_THREAD_STREAMS = os.Getenv("MULTI_THREAD_STREAMS")
 	TEMP_PATH = os.Getenv("TEMP_PATH")
-	LOG_FILE = TEMP_PATH + "/qbit_sync_rclone.log"
+	LOG_FILE = TEMP_PATH + "/" + os.Getenv("LOG_FILE")
 	TAG_1 = os.Getenv("TAG_1")
 	TAG_2 = os.Getenv("TAG_2")
 	THREAD = os.Getenv("THREAD")
