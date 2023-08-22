@@ -18,7 +18,6 @@ var (
 	RCLONE_LOCAL_DIR  string
 	RCLONE_REMOTE_DIR string
 	MULTI_THREAD_STREAMS string
-	TEMP_PATH string
 	LOG_FILE string
 	TAG_1 string
 	TAG_2 string
@@ -160,8 +159,7 @@ func getConfig() {
 	RCLONE_LOCAL_DIR = os.Getenv("RCLONE_LOCAL_DIR")
 	RCLONE_REMOTE_DIR = os.Getenv("RCLONE_REMOTE_DIR")
 	MULTI_THREAD_STREAMS = os.Getenv("MULTI_THREAD_STREAMS")
-	TEMP_PATH = os.Getenv("TEMP_PATH")
-	LOG_FILE = TEMP_PATH + "/" + os.Getenv("LOG_FILE")
+	LOG_FILE = os.Getenv("LOG_FILE")
 	TAG_1 = os.Getenv("TAG_1")
 	TAG_2 = os.Getenv("TAG_2")
 	THREAD = os.Getenv("THREAD")
@@ -170,7 +168,6 @@ func getConfig() {
 func main() {
 	util.Env()
 	getConfig()
-	util.CreateDirIfNotExist(TEMP_PATH)
 	qBitList = getList()
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {

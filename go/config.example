@@ -22,11 +22,8 @@ RCLONE_REMOTE_DIR="/media/tv/"
 # rclone命令参数(一般不需要改)
 MULTI_THREAD_STREAMS="10"
 
-# 程序运行临时目录(一般不需要改)
-TEMP_PATH="/opt/qbittorrent/temp_dir"
-
 # 程序运行日志(一般不需要改)
-LOG_FILE="qbit_rclone_sync.log"
+LOG_FILE="/root/qbit_rclone_sync.log"
 
 # 需要在qBittorrent客户端增加对应标签并打上勾
 TAG_1="脚本控制"
