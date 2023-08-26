@@ -32,6 +32,8 @@ sudo bash go-build.sh
 
 脚本控制：添加这个标签才会受脚本控制，按顺序下载，自动启动/停止
 保种：添加这个标签不会删除本地资源，用于刷上传量（不想保留了移除该标签会自动删除本地资源）
+
+
 ![image](https://github.com/CCCOrz/qBittorrent-rclone-sync/assets/135111234/53a64c12-8610-4ffc-ad88-3c90c078ada0)
 
 ## 功能
