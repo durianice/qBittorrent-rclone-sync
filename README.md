@@ -10,6 +10,11 @@
 
 本机 Ubuntu 20.04 / 2CPU / 1GB RAM / 硬盘40GB
 
+## 功能
+- 动态启动停止(硬盘使用90%时停止下载、占用小于45%时恢复下载)
+- 可选保种选项
+- 多线程上传到远程盘
+- Telegram机器人通知
 
 ## 安装
 ```
@@ -36,12 +41,6 @@ sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rc
 git clone -b release https://github.com/CCCOrz/qBittorrent-rclone-sync.git
 sudo bash go-build.sh
 ```
-
-## 功能
-- 动态启动停止(硬盘使用90%时停止下载、占用小于45%时恢复下载)
-- 可选保种选项
-- 多线程上传到远程盘
-- Telegram机器人通知
 
 ## 注意事项
 - 启用脚本控制后会自动勾选<按顺序下载>保证磁盘不被未完成资源占坑
