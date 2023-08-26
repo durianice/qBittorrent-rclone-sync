@@ -1,5 +1,5 @@
 ## 开始
-客户端 qBittorrent v4.5.2
+客户端 qBittorrent v4.x.x
 
 
 网盘挂载 rclone
@@ -29,6 +29,8 @@ sudo bash go-build.sh
 
 ## 参考配置文件
 [config.example](https://github.com/CCCOrz/qBittorrent-rclone-sync/blob/release/go/config.example)
+
+![image](https://github.com/CCCOrz/qBittorrent-rclone-sync/assets/135111234/53a64c12-8610-4ffc-ad88-3c90c078ada0)
 
 ## 功能
 - 动态启动停止(硬盘使用90%时停止下载、占用小于45%时恢复下载)
