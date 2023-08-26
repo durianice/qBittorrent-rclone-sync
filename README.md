@@ -17,6 +17,9 @@
 本机 Ubuntu 20.04 / 2CPU / 1GB RAM / 硬盘40GB
 
 
+支持的平台：[见发行版](https://github.com/CCCOrz/qBittorrent-rclone-sync/releases)
+
+
 ## 安装
 ```
 sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/install-qbrs.sh)"
