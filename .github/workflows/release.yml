@@ -18,7 +18,7 @@ jobs:
       - name: Upload
         uses: wangyoucao577/go-release-action@v1.30
         with:
-          pre_command: pwd && ls
+          pre_command: "pwd && ls"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
