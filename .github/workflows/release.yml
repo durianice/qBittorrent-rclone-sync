@@ -1,9 +1,7 @@
-name: go Release
+name: go build
 on:
   push:
-    on:
-      push:
-        branches: release
+    branches: release
 
 permissions:
   contents: write
