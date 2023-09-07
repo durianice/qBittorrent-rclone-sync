@@ -32,7 +32,8 @@ get_platform() {
     fi
     echo "$result"
 }
-if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
+
+install() {
     if ! command -v wget &>/dev/null; then
         echo "请先安装 wget"
         exit 1
@@ -75,15 +76,25 @@ if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
     systemctl start qbrs
     systemctl enable qbrs
     systemctl status qbrs
-fi
 
-echo "======== QBRS ========"
-echo "启动 systemctl start qbrs"
-echo "停止 systemctl stop qbrs"
-echo "重启 systemctl restart qbrs"
-echo "状态 systemctl status qbrs"
-echo "配置文件 /usr/local/bin/config.env"
-echo "开机自启 systemctl enable qbrs"
-echo "禁用自启 systemctl disable qbrs"
-echo "更多https://github.com/CCCOrz/qBittorrent-rclone-sync"
-echo "======== QBRS ========"
+    echo "======== QBRS ========"
+    echo "启动 systemctl start qbrs"
+    echo "停止 systemctl stop qbrs"
+    echo "重启 systemctl restart qbrs"
+    echo "状态 systemctl status qbrs"
+    echo "配置文件 /usr/local/bin/config.env"
+    echo "开机自启 systemctl enable qbrs"
+    echo "禁用自启 systemctl disable qbrs"
+    echo "更多https://github.com/CCCOrz/qBittorrent-rclone-sync"
+    echo "======== QBRS ========"
+}
+
+uninstall() {
+    sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
+}
+
+if [[ -f "/etc/systemd/system/qbrs.service" ]]; then
+    uninstall
+fi
+install
+
