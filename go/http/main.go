@@ -102,3 +102,16 @@ func ToggleSequentialDownload(hash string) {
 		log.Fatal("切换下载类型失败") 
 	} 
 }
+
+func AddTags(hash string, tags string) {
+	url := getHost() + "/api/v2/torrents/addTags"
+	h := make(map[string]string)
+	h["Referer"] = getHost()
+	p := make(map[string]string)
+	p["hashes"] = hash
+	p["tags"] = tags
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("添加标签失败") 
+	} 
+}

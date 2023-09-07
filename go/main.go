@@ -136,10 +136,9 @@ func mainTask() {
 			ch <- struct{}{}
 			wg.Add(1)
 			go func(a string, b string, c string, wg *sync.WaitGroup, ch chan struct{}, index int) {
-				util.SendByTelegramBot(fmt.Sprintf("名称 %s\n开始同步 (%v/%v)", name, index + 1, downloadedLen))
 				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch)
 				if err == nil {
-					util.SendByTelegramBot(fmt.Sprintf("名称 %s\n同步完成 (%v/%v)\n已用空间 %s", name, index + 1, downloadedLen, util.GetUsedSpacePercentage()))
+					util.SendByTelegramBot(fmt.Sprintf("名称 %v\n剧名 %v\n同步完成 (%v/%v)\n已用空间 %s", name, subName, index + 1, downloadedLen, util.GetUsedSpacePercentage()))
 				} else {
 					util.SendByTelegramBot(fmt.Sprintf("名称 %s\n同步错误 (%v/%v)\n错误原因：%s", name, index + 1, downloadedLen, err))
 				}
@@ -175,7 +174,7 @@ func main() {
 			select {
 				case <-ticker.C:
 					qBitList = getList()
-					fmt.Printf("获取到%v条信息", len(qBitList))
+					util.SendByTelegramBot(fmt.Sprintf("查询到%v条信息", len(qBitList)))
 				}
 		}
 	}()
