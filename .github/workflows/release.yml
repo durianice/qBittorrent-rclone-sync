@@ -1,5 +1,4 @@
 name: go Release
-
 on:
   push:
     on:
@@ -29,12 +28,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        tag_name: ${{ github.ref }}
-        name: Release ${{ github.ref }}
-        body: TODO New Release.
         draft: false
         prerelease: false
         files: |
-          go/build/qbrs_amd64
-          go/build/qbrs_arm
-          go/build/qbrs_arm64
+          go/build/*
