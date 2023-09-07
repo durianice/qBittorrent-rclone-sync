@@ -23,5 +23,5 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           goversion: https://dl.google.com/go/go1.21.0.linux-amd64.tar.gz
-          project_path: "./go"
+          project_path: "../../go"
       - run: echo "🍏 任务状态 ${{ job.status }}."
