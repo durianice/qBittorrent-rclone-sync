@@ -1,27 +1,37 @@
-name: Release
-run-name:  build release by ${{ github.actor }} 🚀
+name: go Release
+
 on:
-  release:
-    types: [created,published]
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
 jobs:
   build:
+
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64, arm, ppc64le, ppc64, s390x]
+
     steps:
-      - run: echo "🎉 由 ${{ github.event_name }} 事件触发"
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - run: echo "💡 所处位置 ${{ github.repository }} "
-      - name: Upload
-        uses: wangyoucao577/go-release-action@v1.40
-        with:
-          pre_command: "pwd && ls"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          goversion: https://dl.google.com/go/go1.21.0.linux-amd64.tar.gz
-          project_path: "./go"
-      - run: echo "🍏 任务状态 ${{ job.status }}."
+    - uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Build
+      run: bash go-build.sh
+
+    - name: Create Release and Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        tag_name: ${{ github.ref }}
+        name: Release ${{ github.ref }}
+        body: TODO New Release.
+        draft: false
+        prerelease: false
+        files: |
+          go/build/qbrs_amd64
+          go/build/qbrs_arm
+          go/build/qbrs_arm64
