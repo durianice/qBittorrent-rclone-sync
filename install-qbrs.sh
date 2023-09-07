@@ -56,6 +56,14 @@ install() {
         exit 1
     fi
 
+    if [[ -f "/usr/local/bin/config.env" ]]; then
+        echo ">>>>>>>>>>>>>>>>"
+        echo "旧的配置文件已备份，请重新编辑新配置文件并重启"
+        echo "旧配置：/usr/local/bin/config.env.bak"
+        echo "<<<<<<<<<<<<<<<<"
+        cp /usr/local/bin/config.env /usr/local/bin/config.env.bak
+    fi
+
     mv $filename /usr/local/bin/
     mv config.env /usr/local/bin/
     chmod +x "/usr/local/bin/$filename"
