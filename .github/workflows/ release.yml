@@ -1,8 +1,8 @@
 name: Release
 run-name:  build release by ${{ github.actor }} 🚀
-on: 
-  push:
-    branches: "release"
+on:
+  release:
+    types: [created,published]
 jobs:
   build:
     runs-on: ubuntu-latest
