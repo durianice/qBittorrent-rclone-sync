@@ -20,7 +20,7 @@
 支持的平台：[见发行版](https://github.com/CCCOrz/qBittorrent-rclone-sync/releases)
 
 
-## 安装
+## 安装/更新
 ```
 sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/install-qbrs.sh)"
 ```
