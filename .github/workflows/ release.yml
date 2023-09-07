@@ -1,29 +1,26 @@
 name: Release
-run-name: ${{ github.actor }} build release 🚀
+run-name:  build release by ${{ github.actor }} 🚀
 on: 
   push:
     branches: "release"
 jobs:
-  Build:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
         goarch: [amd64, arm64, arm, ppc64le, ppc64, s390x]
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - run: echo "🎉 由 ${{ github.event_name }} 事件触发"
       - name: Check out repository code
         uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - run: echo "💡 所处位置 ${{ github.repository }} "
       - name: Upload
         uses: wangyoucao577/go-release-action@v1.30
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: 1.20
+          goversion: https://dl.google.com/go/go1.21.0.linux-amd64.tar.gz
           project_path: "./go"
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+      - run: echo "🍏 任务状态 ${{ job.status }}."
