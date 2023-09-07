@@ -22,6 +22,7 @@ var (
 	TAG_1 string
 	TAG_2 string
 	THREAD string
+	DISK_LOCAL string
 )
 
 var qBitList []map[string]interface{}
@@ -44,7 +45,7 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *s
 }
 
 func memoryControl() string {
-	used := util.GetUsedSpacePercentage()
+	used := util.GetUsedSpacePercentage(DISK_LOCAL)
 	res, _ := util.PercentageToDecimal(used)
 	if res >= 0.90 {
 		return "P"
@@ -138,7 +139,7 @@ func mainTask() {
 			go func(a string, b string, c string, wg *sync.WaitGroup, ch chan struct{}, index int) {
 				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch)
 				if err == nil {
-					util.SendByTelegramBot(fmt.Sprintf("名称 %v\n剧名 %v\n同步完成 (%v/%v)\n已用空间 %s", name, subName, index + 1, downloadedLen, util.GetUsedSpacePercentage()))
+					util.SendByTelegramBot(fmt.Sprintf("名称 %v\n剧名 %v\n同步完成 (%v/%v)\n已用空间 %s", name, subName, index + 1, downloadedLen, util.GetUsedSpacePercentage(DISK_LOCAL)))
 				} else {
 					util.SendByTelegramBot(fmt.Sprintf("名称 %s\n同步错误 (%v/%v)\n错误原因：%s", name, index + 1, downloadedLen, err))
 				}
@@ -162,6 +163,7 @@ func getConfig() {
 	TAG_1 = os.Getenv("TAG_1")
 	TAG_2 = os.Getenv("TAG_2")
 	THREAD = os.Getenv("THREAD")
+	DISK_LOCAL = os.Getenv("DISK_LOCAL")
 }
 
 func main() {
@@ -179,7 +181,7 @@ func main() {
 		}
 	}()
 	for {
-		util.SendByTelegramBot(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage()))
+		util.SendByTelegramBot(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)))
 		sec := util.MeasureExecutionTime(mainTask)
 		util.SendByTelegramBot(fmt.Sprintf("运行结束 本次耗时 %v", sec))
 		time.Sleep(60 * time.Second)

@@ -10,6 +10,9 @@ QBIT_URL="http://127.0.0.1:8080"
 QBIT_USER="admin"
 QBIT_PASSWD="adminadmin"
 
+# 挂载的磁盘 (df -h 查看 Mounted on 挂载的目录)
+DISK_LOCAL="/"
+
 # rclone挂载名称
 RCLONE_NAME="gdrive:"
 

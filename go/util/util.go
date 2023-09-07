@@ -109,8 +109,8 @@ func GetFreeSpace(dir string, unit string) (int, error) {
 	}
 }
 
-func GetUsedSpacePercentage() string {
-	command := fmt.Sprintf("df --output=pcent %v | tail -n 1", "/")
+func GetUsedSpacePercentage(disk string) string {
+	command := fmt.Sprintf("df --output=pcent %v | tail -n 1", disk)
 	usedStr, _ := RunShellCommand(command)
 	usedStr = strings.ReplaceAll(usedStr, " ", "") 
 	usedStr = strings.ReplaceAll(usedStr, "\n", "") 
