@@ -38,8 +38,8 @@ install() {
         echo "请先安装 wget"
         exit 1
     fi
-    if ! command -v vim &>/dev/null; then
-        echo "请先安装 vim"
+    if ! command -v vim &> /dev/null && ! command -v nano &> /dev/null; then
+        echo "请先安装 vim 或 nano"
         exit 1
     fi
     type=$(get_platform)
