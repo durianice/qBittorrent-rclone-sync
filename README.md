@@ -11,7 +11,7 @@
 网盘挂载 rclone
 
 
-远端存储 Google Drive
+远端存储 Google Drive / One Drive
 
 
 本机 Ubuntu 20.04 / 2CPU / 1GB RAM / 硬盘40GB
