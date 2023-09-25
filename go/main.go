@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
 	"github.com/joho/godotenv"
 )
 
@@ -25,10 +27,13 @@ var (
 	DISK_LOCAL string
 )
 
+var counter Counter
+
 var qBitList []map[string]interface{}
 
 func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *sync.WaitGroup, ch chan struct{}) error {
 	defer wg.Done()
+	defer counter.Decrease()
 	option := "moveto"
 	if keepSourceFile {
 		option = "copyto"
@@ -99,6 +104,22 @@ func getList() ([]map[string]interface{}) {
 	})
 }
 
+type Counter struct {
+    val int32
+}
+
+func (c *Counter) Increase() {
+    atomic.AddInt32(&c.val, 1)
+}
+
+func (c *Counter) Decrease() {
+    atomic.AddInt32(&c.val, -1)
+}
+
+func (c *Counter) Value() int32 {
+    return atomic.LoadInt32(&c.val)
+}
+
 func mainTask() {
 	var wg sync.WaitGroup
 	THREAD, err := strconv.Atoi(THREAD)
@@ -136,7 +157,9 @@ func mainTask() {
 			}
 			ch <- struct{}{}
 			wg.Add(1)
+			counter.Increase()
 			go func(a string, b string, c string, wg *sync.WaitGroup, ch chan struct{}, index int) {
+				util.SendByTelegramBot(fmt.Sprintf("开始同步 %v\n", subName))
 				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch)
 				if err == nil {
 					util.SendByTelegramBot(fmt.Sprintf("名称 %v\n剧名 %v\n同步完成 (%v/%v)\n已用空间 %s", name, subName, index + 1, downloadedLen, util.GetUsedSpacePercentage(DISK_LOCAL)))
@@ -169,6 +192,7 @@ func getConfig() {
 func main() {
 	util.Env()
 	getConfig()
+	counter = Counter{}
 	qBitList = getList()
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {
@@ -177,6 +201,7 @@ func main() {
 				case <-ticker.C:
 					qBitList = getList()
 					util.SendByTelegramBot(fmt.Sprintf("查询到%v条信息", len(qBitList)))
+					util.SendByTelegramBot(fmt.Sprintf("当前线程情况(%v/%v)", counter.Value(), THREAD))
 				}
 		}
 	}()
