@@ -47,6 +47,9 @@ install() {
     cd ~
     REPO_URL="https://api.github.com/repos/CCCOrz/qBittorrent-rclone-sync/releases/latest"
     TAG=$(wget -qO- -t1 -T2 ${REPO_URL} | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
+    if [[ -z $TAG ]]; then
+        TAG="latest"
+    fi
     wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/$TAG/$filename"
     wget -O config.env https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
     vim config.env

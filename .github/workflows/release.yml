@@ -30,3 +30,11 @@ jobs:
         prerelease: false
         files: |
           go/build/*
+    - name: Publish as tag 'latest'
+      uses: softprops/action-gh-release@v1
+      with:
+        name: 'latest'
+        draft: false
+        prerelease: false
+        files: |
+          go/build/*
