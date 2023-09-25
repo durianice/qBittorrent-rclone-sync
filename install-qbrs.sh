@@ -38,10 +38,6 @@ install() {
         echo "请先安装 wget"
         exit 1
     fi
-    if ! command -v vim &> /dev/null && ! command -v nano &> /dev/null; then
-        echo "请先安装 vim 或 nano"
-        exit 1
-    fi
     type=$(get_platform)
     filename="qbrs_${type}"
     cd ~
@@ -51,33 +47,34 @@ install() {
         TAG="latest"
     fi
     wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/$TAG/$filename"
-    wget -O config.env https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
-    vim config.env
+    wget https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
 
-    if [[ ! -f "config.env" ]]; then
-        echo "配置文件config.env 不存在"
+    if [[ ! -f "$filename" ]]; then
+        echo "运行程序 qbrs 不存在"
         exit 1
     fi
 
-    if [[ -f "/usr/local/bin/config.env" ]]; then
-        echo ">>>>>>>>>>>>>>>>"
-        echo "旧的配置文件已备份，请重新编辑新配置文件并重启"
-        echo "旧配置：/usr/local/bin/config.env.bak"
-        echo "<<<<<<<<<<<<<<<<"
-        cp /usr/local/bin/config.env /usr/local/bin/config.env.bak
+    if [[ ! -f "config.example" ]]; then
+        echo "配置文件 config.env 不存在"
+        exit 1
     fi
 
-    mv $filename /usr/local/bin/
-    mv config.env /usr/local/bin/
-    chmod +x "/usr/local/bin/$filename"
+    WORK_DIR="/usr/local/bin"
+
+    if [[ ! -f "${WORK_DIR}/config.env" ]]; then
+        cp config.example ${WORK_DIR}/config.env
+    fi
+
+    mv $filename ${WORK_DIR}/
+    chmod +x "${WORK_DIR}/$filename"
 
     echo "[Unit]
     Description=qBittorrent-rclone-sync
     After=network.target
 
     [Service]
-    ExecStart=/usr/local/bin/$filename
-    WorkingDirectory=/usr/local/bin/
+    ExecStart=${WORK_DIR}/$filename
+    WorkingDirectory=${WORK_DIR}/
     Restart=on-abnormal
 
     [Install]
@@ -87,13 +84,15 @@ install() {
     systemctl start qbrs
     systemctl enable qbrs
     systemctl status qbrs
-
+    echo ""
+    echo "手动编辑配置文件 ${WORK_DIR}/config.env"
+    echo ""
     echo "======== QBRS ========"
     echo "启动 systemctl start qbrs"
     echo "停止 systemctl stop qbrs"
     echo "重启 systemctl restart qbrs"
     echo "状态 systemctl status qbrs"
-    echo "配置文件 /usr/local/bin/config.env"
+    echo "配置文件 ${WORK_DIR}/config.env"
     echo "开机自启 systemctl enable qbrs"
     echo "禁用自启 systemctl disable qbrs"
     echo "更多https://github.com/CCCOrz/qBittorrent-rclone-sync"
