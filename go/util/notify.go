@@ -37,6 +37,12 @@ func Notify(msg string, _type string) {
 	}
 }
 
+func DeleteMsg(_type string) {
+	if notify[_type] != nil && notify[_type] != "" {
+		deleteTgBotMessage(notify[_type])
+	}
+}
+
 func sendTgBotMessage(msg string) string {
 	url := "https://api.telegram.org/bot" + os.Getenv("BOT_TOKEN") + "/sendMessage"
 	h := make(map[string]string)
@@ -72,5 +78,27 @@ func editTgBotMessage(msg string, id interface{}) bool {
 		return false
 	}
 	return ok.(bool)
-	
+}
+
+func deleteTgBotMessage(id interface{}) bool {
+	url := "https://api.telegram.org/bot" + os.Getenv("BOT_TOKEN") + "/deletemessage"
+	h := make(map[string]string)
+	p := make(map[string]interface{})
+	p["chat_id"] = os.Getenv("CHAT_ID")
+	p["message_id"] = id
+	res, err := Post(url, h, p)
+	if err != nil {
+		return false
+	}
+	parser := JSONParser{}
+	parseErr := parser.Parse(res)
+	if parseErr != nil {
+		fmt.Println("解析 TG MSG JSON 失败：", err)
+		return false
+	}
+	ok, msgErr := parser.Get("ok")
+	if msgErr != nil {
+		return false
+	}
+	return ok.(bool)
 }

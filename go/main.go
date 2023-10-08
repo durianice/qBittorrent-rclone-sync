@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -32,13 +31,9 @@ var (
 const CATEGORY_1 = "_电影"
 const CATEGORY_2 = "_电视节目"
 
-var counter Counter
-
 var qBitList []map[string]interface{}
 
-func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *sync.WaitGroup, ch chan struct{}, syncMsg string) error {
-	defer wg.Done()
-	defer counter.Decrease()
+func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncMsg string) error {
 	option := "moveto"
 	if keepSourceFile {
 		option = "copyto"
@@ -46,7 +41,6 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *s
 	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q %q %q", option,
 	MULTI_THREAD_STREAMS, LOG_FILE, sourceFile, targetFile)
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
-	<-ch
 	if err != nil {
 		return err
 	}
@@ -75,7 +69,7 @@ func getList() ([]map[string]interface{}) {
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
 		return strings.Contains(obj["tags"].(string), TAG_1)
 	})
-	return util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
+	res := util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
 		name, _ := obj["name"].(string)
 		hash, _ := obj["hash"].(string)
 		tags, _ := obj["tags"].(string)
@@ -88,17 +82,20 @@ func getList() ([]map[string]interface{}) {
 		subListDownloaded := util.Filter(http.GetDetail(hash), func(obj map[string]interface{}) bool {
 			return obj["progress"].(float64) == 1
 		})
-		newObj := map[string]interface{}{
-			"name": name,
-			"hash": hash,
-			"tags": tags,
-			"category": category,
-			"seqDl": seqDl,
-			"state": state,
-			"downloadPath": downloadPath,
-			"savePath": savePath,
-			"subListDownloaded": subListDownloaded,
-		}
+		subListDownloaded = util.Map(subListDownloaded, func(subObj map[string]interface{}) map[string]interface{} {
+			subName, _ := subObj["name"].(string)
+			return map[string]interface{}{
+				"name": name,
+				"subName": subName,
+				"hash": hash,
+				"tags": tags,
+				"category": category,
+				"seqDl": seqDl,
+				"state": state,
+				"downloadPath": downloadPath,
+				"savePath": savePath,
+			}
+		})
 		memState := memoryControl()
 		if memState == "P" {
 			http.Pause(hash)
@@ -109,24 +106,18 @@ func getList() ([]map[string]interface{}) {
 		if !seqDl {
 			http.ToggleSequentialDownload(hash)
 		}
-		return newObj
+		return map[string]interface{}{
+			"subListDownloaded": subListDownloaded,
+		}
 	})
-}
-
-type Counter struct {
-    val int32
-}
-
-func (c *Counter) Increase() {
-    atomic.AddInt32(&c.val, 1)
-}
-
-func (c *Counter) Decrease() {
-    atomic.AddInt32(&c.val, -1)
-}
-
-func (c *Counter) Value() int32 {
-    return atomic.LoadInt32(&c.val)
+	var r []map[string]interface{}
+	for _, obj := range res {
+		subListDownloaded, _ := obj["subListDownloaded"].([]map[string]interface{})
+		for _, subObj := range subListDownloaded {
+			r = append(r, subObj)
+		}
+	}
+	return r
 }
 
 func mainTask() {
@@ -137,46 +128,45 @@ func mainTask() {
 	}
 	ch := make(chan struct{}, THREAD)
 
-	for _, obj := range qBitList {
+	total := len(qBitList)
+	wg.Add(total)
+	for index, obj := range qBitList {
 		name, _ := obj["name"].(string)
 		tags, _ := obj["tags"].(string)
 		category, _ := obj["category"].(string)
 		downloadPath, _ := obj["downloadPath"].(string)
 		savePath, _ := obj["savePath"].(string)
-		subListDownloaded, _ := obj["subListDownloaded"].([]map[string]interface{})
-		downloadedLen := len(subListDownloaded)
-		for index, subObj := range subListDownloaded {
-			subName, _ := subObj["name"].(string)
-			sourcePath := downloadPath + "/" + subName
-			targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + category2Path(category) + subName
-			localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + category2Path(category) + subName
+		subName, _ := obj["subName"].(string)
+		sourcePath := downloadPath + "/" + subName
+		targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + category2Path(category) + subName
+		localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + category2Path(category) + subName
+		if !util.FileExists(sourcePath) {
+			sourcePath = savePath + "/" + subName
 			if !util.FileExists(sourcePath) {
-				sourcePath = savePath + "/" + subName
-				if !util.FileExists(sourcePath) {
-					fmt.Printf("%v\n未找到资源，跳过", sourcePath)
-					continue
-				}
-			}
-			if util.FileExists(localTargetPath) {
-				if util.FileExists(sourcePath) && !strings.Contains(tags, TAG_2) {
-					command := fmt.Sprintf("sudo rm %q", sourcePath)
-					util.RunShellCommand(command)
-				}
-				fmt.Printf("%v\n云盘已有该资源，跳过", sourcePath)
+				// fmt.Printf("%v\n未找到资源，跳过", sourcePath)
 				continue
 			}
-			ch <- struct{}{}
-			wg.Add(1)
-			counter.Increase()
-			go func(a string, b string, c string, wg *sync.WaitGroup, ch chan struct{}, index int) {
-				// util.Notify(fmt.Sprintf("正在同步 (%v/%v)\n一级名称 %v\n二级名称 %v\n已用空间 %s", index + 1, downloadedLen, name, subName, util.GetUsedSpacePercentage(DISK_LOCAL)), subName)
-				syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n一级名称 %v\n二级名称 %v\n已用空间 %s", index + 1, downloadedLen, name, subName, util.GetUsedSpacePercentage(DISK_LOCAL))
-				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch, syncMsg)
-				if err != nil {
-					util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", index + 1, downloadedLen, name, subName, err), "")
-				}
-			}(sourcePath, targetPath, tags, &wg, ch, index)
 		}
+		if util.FileExists(localTargetPath) {
+			if util.FileExists(sourcePath) && !strings.Contains(tags, TAG_2) {
+				command := fmt.Sprintf("sudo rm %q", sourcePath)
+				util.RunShellCommand(command)
+			}
+			// fmt.Printf("%v\n云盘已有该资源，跳过", sourcePath)
+			continue
+		}
+		ch <- struct{}{}
+		go func(ID int) {
+			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n一级名称 %v\n二级名称 %v", ID, total, name, subName)
+			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, TAG_2), syncMsg)
+			if err != nil {
+				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", ID, total, name, subName, err), "")
+			}
+			util.Notify(fmt.Sprintf("同步任务 %v 结束", ID), "")
+			util.DeleteMsg(sourcePath)
+			<-ch
+			wg.Done()
+		}(index + 1)
 	}
 	wg.Wait()
 	close(ch)
@@ -213,7 +203,6 @@ func category2Path(category string) string {
 func main() {
 	util.Env()
 	getConfig()
-	counter = Counter{}
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")
@@ -224,7 +213,6 @@ func main() {
 				case <-ticker.C:
 					qBitList = getList()
 					util.Notify(fmt.Sprintf("查询到%v条信息", len(qBitList)), "查询")
-					util.Notify(fmt.Sprintf("当前线程情况(%v/%v)", counter.Value(), THREAD), "线程")
 				}
 		}
 	}()

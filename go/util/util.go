@@ -81,7 +81,7 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 			syncMsg = strings.ReplaceAll(syncMsg, "🔵同步", "✅完成")
 		}
 		Notify(fmt.Sprintf("%v", syncMsg + "\n\n🎈实时进度\n" + syncProcess), flag)
-		if err == io.EOF {
+		if err == io.EOF || strings.Contains(syncProcess, "100%") {
 			break
 		}
 	}
