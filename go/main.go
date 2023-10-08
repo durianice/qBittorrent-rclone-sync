@@ -129,7 +129,6 @@ func mainTask() {
 	ch := make(chan struct{}, THREAD)
 
 	total := len(qBitList)
-	wg.Add(total)
 	for index, obj := range qBitList {
 		name, _ := obj["name"].(string)
 		tags, _ := obj["tags"].(string)
@@ -156,13 +155,13 @@ func mainTask() {
 			continue
 		}
 		ch <- struct{}{}
+		wg.Add(1)
 		go func(ID int) {
 			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n一级名称 %v\n二级名称 %v", ID, total, name, subName)
 			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, TAG_2), syncMsg)
 			if err != nil {
 				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", ID, total, name, subName, err), "")
 			}
-			util.Notify(fmt.Sprintf("同步任务 %v 结束", ID), "")
 			<-ch
 			wg.Done()
 		}(index + 1)
