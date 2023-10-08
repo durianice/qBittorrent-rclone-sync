@@ -17,7 +17,7 @@ func Notify(msg string, _type string) {
 	
 	// fmt.Printf("%v\n", msg)
 	msg = "[" + time.Now().Format("2006-01-02 15:04:05") + "]\n\n" + msg
-	if notify[_type] != nil && notify[_type] != "" {
+	if _type != "" && notify[_type] != nil && notify[_type] != "" {
 		editTgBotMessage(msg, notify[_type])
 		return
 	}

@@ -212,11 +212,11 @@ func main() {
 				case <-ticker.C:
 					qBitList = getList()
 					util.Notify(fmt.Sprintf("查询到%v条信息", len(qBitList)), "查询")
+					util.Notify(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "空间")
 				}
 		}
 	}()
 	for {
-		util.Notify(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "空间")
 		sec := util.MeasureExecutionTime(mainTask)
 		util.Notify(fmt.Sprintf("运行结束 本次耗时 %v", sec), "")
 		time.Sleep(60 * time.Second)
