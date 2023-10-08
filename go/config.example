@@ -17,10 +17,10 @@ DISK_LOCAL="/"
 RCLONE_NAME="gdrive:"
 
 # rclone本地挂载目录
-RCLONE_LOCAL_DIR="/opt/GoogleDrive"
+RCLONE_LOCAL_DIR="/GoogleDrive"
 
-# 远程资源保存路径(自定义但必须以 "/" 结尾，示例为 媒体/电视剧)
-RCLONE_REMOTE_DIR="/media/tv/"
+# 远程资源保存路径(以 "/" 结尾)
+RCLONE_REMOTE_DIR="/media/"
 
 # rclone命令参数(一般不需要改)
 MULTI_THREAD_STREAMS="10"
@@ -36,6 +36,12 @@ TAG_2="保种"
 
 # rclone同步到远程并发线程数(根据实际情况修改，CPU不行就改小)
 THREAD=10
+
+# 内存控制
+# VPS内存占用大于等于这个值时停止下载
+MAX_MEM=90%
+# VPS内存占用小于这个值时恢复下载
+MIN_MEM=40%
 
 # Telegram Bot通知
 CHAT_ID="123456"

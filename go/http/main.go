@@ -115,3 +115,16 @@ func AddTags(hash string, tags string) {
 		log.Fatal("添加标签失败") 
 	} 
 }
+
+func CreateCategory(category string, savePath string) {
+	url := getHost() + "/api/v2/torrents/createCategory"
+	h := make(map[string]string)
+	h["Referer"] = getHost()
+	p := make(map[string]string)
+	p["category"] = category
+	p["savePath"] = savePath
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("创建分类失败或分类已存在") 
+	} 
+}

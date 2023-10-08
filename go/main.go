@@ -25,13 +25,18 @@ var (
 	TAG_2 string
 	THREAD string
 	DISK_LOCAL string
+	MAX_MEM string
+	MIN_MEM string
 )
+
+const CATEGORY_1 = "_电影"
+const CATEGORY_2 = "_电视节目"
 
 var counter Counter
 
 var qBitList []map[string]interface{}
 
-func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *sync.WaitGroup, ch chan struct{}) error {
+func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *sync.WaitGroup, ch chan struct{}, syncMsg string) error {
 	defer wg.Done()
 	defer counter.Decrease()
 	option := "moveto"
@@ -40,7 +45,7 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *s
 	}
 	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q %q %q", option,
 	MULTI_THREAD_STREAMS, LOG_FILE, sourceFile, targetFile)
-	_, err := util.RunShellCommand(command)
+	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	<-ch
 	if err != nil {
 		return err
@@ -52,10 +57,12 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, wg *s
 func memoryControl() string {
 	used := util.GetUsedSpacePercentage(DISK_LOCAL)
 	res, _ := util.PercentageToDecimal(used)
-	if res >= 0.90 {
+	MAX, _ := util.PercentageToDecimal(MAX_MEM)
+	MIN, _ := util.PercentageToDecimal(MIN_MEM)
+	if res >= MAX {
 		return "P"
 	}
-	if res < 0.45 {
+	if res < MIN {
 		return "D"
 	}
 	return "N"
@@ -72,6 +79,7 @@ func getList() ([]map[string]interface{}) {
 		name, _ := obj["name"].(string)
 		hash, _ := obj["hash"].(string)
 		tags, _ := obj["tags"].(string)
+		category, _ := obj["category"].(string)
 		seqDl, _ := obj["seq_dl"].(bool)
 		state, _ := obj["state"].(string)
 		downloadPath, _ := obj["download_path"].(string)
@@ -84,6 +92,7 @@ func getList() ([]map[string]interface{}) {
 			"name": name,
 			"hash": hash,
 			"tags": tags,
+			"category": category,
 			"seqDl": seqDl,
 			"state": state,
 			"downloadPath": downloadPath,
@@ -131,6 +140,7 @@ func mainTask() {
 	for _, obj := range qBitList {
 		name, _ := obj["name"].(string)
 		tags, _ := obj["tags"].(string)
+		category, _ := obj["category"].(string)
 		downloadPath, _ := obj["downloadPath"].(string)
 		savePath, _ := obj["savePath"].(string)
 		subListDownloaded, _ := obj["subListDownloaded"].([]map[string]interface{})
@@ -138,8 +148,8 @@ func mainTask() {
 		for index, subObj := range subListDownloaded {
 			subName, _ := subObj["name"].(string)
 			sourcePath := downloadPath + "/" + subName
-			targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + subName
-			localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + subName
+			targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + category2Path(category) + subName
+			localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + category2Path(category) + subName
 			if !util.FileExists(sourcePath) {
 				sourcePath = savePath + "/" + subName
 				if !util.FileExists(sourcePath) {
@@ -159,12 +169,11 @@ func mainTask() {
 			wg.Add(1)
 			counter.Increase()
 			go func(a string, b string, c string, wg *sync.WaitGroup, ch chan struct{}, index int) {
-				util.SendByTelegramBot(fmt.Sprintf("开始同步 %v\n", subName))
-				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch)
-				if err == nil {
-					util.SendByTelegramBot(fmt.Sprintf("名称 %v\n剧名 %v\n同步完成 (%v/%v)\n已用空间 %s", name, subName, index + 1, downloadedLen, util.GetUsedSpacePercentage(DISK_LOCAL)))
-				} else {
-					util.SendByTelegramBot(fmt.Sprintf("名称 %s\n同步错误 (%v/%v)\n错误原因：%s", name, index + 1, downloadedLen, err))
+				// util.Notify(fmt.Sprintf("正在同步 (%v/%v)\n一级名称 %v\n二级名称 %v\n已用空间 %s", index + 1, downloadedLen, name, subName, util.GetUsedSpacePercentage(DISK_LOCAL)), subName)
+				syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n一级名称 %v\n二级名称 %v\n已用空间 %s", index + 1, downloadedLen, name, subName, util.GetUsedSpacePercentage(DISK_LOCAL))
+				err := rcloneTask(a, b, strings.Contains(c, TAG_2), wg, ch, syncMsg)
+				if err != nil {
+					util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", index + 1, downloadedLen, name, subName, err), "")
 				}
 			}(sourcePath, targetPath, tags, &wg, ch, index)
 		}
@@ -187,6 +196,18 @@ func getConfig() {
 	TAG_2 = os.Getenv("TAG_2")
 	THREAD = os.Getenv("THREAD")
 	DISK_LOCAL = os.Getenv("DISK_LOCAL")
+	MAX_MEM = os.Getenv("MAX_MEM")
+	MIN_MEM = os.Getenv("MIN_MEM")
+}
+
+func category2Path(category string) string {
+	if category == CATEGORY_1 {
+		return "movie/"
+	}
+	if category == CATEGORY_2 {
+		return "tv/"
+	}
+	return ""
 }
 
 func main() {
@@ -194,21 +215,23 @@ func main() {
 	getConfig()
 	counter = Counter{}
 	qBitList = getList()
+	http.CreateCategory(CATEGORY_1, "")
+	http.CreateCategory(CATEGORY_2, "")
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {
 		for {
 			select {
 				case <-ticker.C:
 					qBitList = getList()
-					util.SendByTelegramBot(fmt.Sprintf("查询到%v条信息", len(qBitList)))
-					util.SendByTelegramBot(fmt.Sprintf("当前线程情况(%v/%v)", counter.Value(), THREAD))
+					util.Notify(fmt.Sprintf("查询到%v条信息", len(qBitList)), "查询")
+					util.Notify(fmt.Sprintf("当前线程情况(%v/%v)", counter.Value(), THREAD), "线程")
 				}
 		}
 	}()
 	for {
-		util.SendByTelegramBot(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)))
+		util.Notify(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "空间")
 		sec := util.MeasureExecutionTime(mainTask)
-		util.SendByTelegramBot(fmt.Sprintf("运行结束 本次耗时 %v", sec))
+		util.Notify(fmt.Sprintf("运行结束 本次耗时 %v", sec), "")
 		time.Sleep(60 * time.Second)
 	}
 }

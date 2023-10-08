@@ -1,19 +1,22 @@
 package util
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"os"
 	"os/exec"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func ParseJsonStr(jsonStr string) ([]map[string]interface{}) {
+func ParseJsonStr(jsonStr string) []map[string]interface{} {
 
 	var unknownObjects []json.RawMessage
 
@@ -46,23 +49,72 @@ func RunShellCommand(command string) (string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err) 
+		fmt.Println("Error:", err)
 		fmt.Println("Error cmd:", command)
 		return "", err
 	}
 	return string(output), nil
 }
 
+func RunRcloneCommand(command string, syncMsg string, flag string) error {
+	cmd := exec.Command("bash", "-c", command)
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("创建输出管道失败：%s", err)
+	}
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("启动命令失败：%s", err)
+	}
+	reader := bufio.NewReader(stdoutPipe)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("读取命令输出失败：%s", err)
+		}
+		// fmt.Print(line)
+		if !strings.Contains(line, "ETA") {
+			continue
+		}
+		syncProcess := getFormatOutput(line)
+		if strings.Contains(syncProcess, "100%") {
+			syncMsg = strings.ReplaceAll(syncMsg, "🔵同步", "✅完成")
+		}
+		Notify(fmt.Sprintf("%v", syncMsg + "\n\n🎈实时进度\n" + syncProcess), flag)
+		if err == io.EOF {
+			break
+		}
+	}
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("命令执行失败：%s", err)
+	}
+	fmt.Println("命令执行完成")
+	return nil
+}
+
+func getFormatOutput(input string) string {
+	parts := strings.Split(input, "Transferred:")
+	if len(parts) != 0 {
+		re := regexp.MustCompile(`\s+`)
+		trimmed := strings.ReplaceAll(parts[1], " ", "")
+		trimmed = re.ReplaceAllString(trimmed, "")
+		trimmed = strings.ReplaceAll(trimmed, "ETA", "预计剩余时间 ")
+		return strings.ReplaceAll(trimmed, ",", "\n")
+	}
+	return ""
+}
+
 func Env() {
 	switch runtime.GOOS {
-		case "windows":
-			panic("Windows not support")
-		case "linux":
-			fmt.Println("Running on Linux")
-		case "darwin":
-			panic("MacOS not support")
-		default:
-			panic("Current OS not support")
+	case "windows":
+		panic("Windows not support")
+	case "linux":
+		fmt.Println("Running on Linux")
+	case "darwin":
+		panic("MacOS not support")
+	default:
+		panic("Current OS not support")
 	}
 }
 
@@ -90,7 +142,6 @@ func CreateDirIfNotExist(dirPath string) {
 	}
 }
 
-
 func GetFreeSpace(dir string, unit string) (int, error) {
 	command := fmt.Sprintf("df --output=avail %v | tail -n 1", dir)
 	freeSpaceKBStr, _ := RunShellCommand(command)
@@ -112,14 +163,14 @@ func GetFreeSpace(dir string, unit string) (int, error) {
 func GetUsedSpacePercentage(disk string) string {
 	command := fmt.Sprintf("df --output=pcent %v | tail -n 1", disk)
 	usedStr, _ := RunShellCommand(command)
-	usedStr = strings.ReplaceAll(usedStr, " ", "") 
-	usedStr = strings.ReplaceAll(usedStr, "\n", "") 
+	usedStr = strings.ReplaceAll(usedStr, " ", "")
+	usedStr = strings.ReplaceAll(usedStr, "\n", "")
 	return usedStr
 }
 
 func PercentageToDecimal(percentageStr string) (float64, error) {
-	percentageStr = strings.ReplaceAll(percentageStr, " ", "") 
-	percentageStr = strings.ReplaceAll(percentageStr, "\n", "") 
+	percentageStr = strings.ReplaceAll(percentageStr, " ", "")
+	percentageStr = strings.ReplaceAll(percentageStr, "\n", "")
 	percentageStr = strings.TrimRight(percentageStr, "%")
 	percentage, err := strconv.ParseFloat(percentageStr, 64)
 	if err != nil {
@@ -131,17 +182,17 @@ func PercentageToDecimal(percentageStr string) (float64, error) {
 }
 
 func MeasureExecutionTime(function func()) time.Duration {
-    startTime := time.Now()
-    function()
-    endTime := time.Now()
-    elapsed := endTime.Sub(startTime)
-    elapsedSeconds := elapsed.Seconds()
-    return time.Duration(elapsedSeconds) * time.Second
+	startTime := time.Now()
+	function()
+	endTime := time.Now()
+	elapsed := endTime.Sub(startTime)
+	elapsedSeconds := elapsed.Seconds()
+	return time.Duration(elapsedSeconds) * time.Second
 }
 
-func GetRealAbsolutePath() (string) {
+func GetRealAbsolutePath() string {
 	res, _ := RunShellCommand("pwd")
-	res = strings.ReplaceAll(res, "\n", "") 
+	res = strings.ReplaceAll(res, "\n", "")
 	return res
 }
 
@@ -232,9 +283,3 @@ func indirectToStringerOrError(a interface{}) interface{} {
 	}
 	return v.Interface()
 }
-
-
-
-
-
-
