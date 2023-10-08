@@ -163,7 +163,6 @@ func mainTask() {
 				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", ID, total, name, subName, err), "")
 			}
 			util.Notify(fmt.Sprintf("同步任务 %v 结束", ID), "")
-			util.DeleteMsg(sourcePath)
 			<-ch
 			wg.Done()
 		}(index + 1)
