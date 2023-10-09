@@ -67,7 +67,7 @@ func getList() ([]map[string]interface{}) {
 	list := http.GetInfo()
 	// 按标签过滤
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
-		return strings.Contains(obj["tags"].(string), TAG_1)
+		return strings.Contains(obj["tags"].(string), TAG_1) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
 	})
 	res := util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
 		name, _ := obj["name"].(string)
