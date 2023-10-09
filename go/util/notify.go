@@ -31,9 +31,15 @@ func Notify(msg string, _type string) {
 	message_id, err := parser.Get("result", "message_id")
 	if err != nil {
 		fmt.Println("获取message_id失败：", err)
-	} else {
+	}
+	if _type != "" {
 		// fmt.Println("message_id:", message_id)
 		notify[_type] = message_id
+	} else {
+		go func ()  {
+			time.Sleep(30 * time.Second)
+			deleteTgBotMessage(message_id)
+		}()
 	}
 }
 

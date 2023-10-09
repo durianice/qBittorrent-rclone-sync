@@ -157,10 +157,10 @@ func mainTask() {
 		ch <- struct{}{}
 		wg.Add(1)
 		go func(ID int) {
-			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n一级名称 %v\n二级名称 %v", ID, total, name, subName)
+			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n%v\n%v", ID, total, name, subName)
 			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, TAG_2), syncMsg)
 			if err != nil {
-				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n一级名称 %v\n二级名称 %v \n错误原因 %v", ID, total, name, subName, err), "")
+				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", ID, total, name, subName, err), "")
 			}
 			<-ch
 			wg.Done()
@@ -210,14 +210,18 @@ func main() {
 			select {
 				case <-ticker.C:
 					qBitList = getList()
-					util.Notify(fmt.Sprintf("查询到%v条信息", len(qBitList)), "查询")
-					util.Notify(fmt.Sprintf("已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "空间")
+					util.Notify(fmt.Sprintf("💬查询到 %v 条已下载信息", len(qBitList)), "")
+					util.Notify(fmt.Sprintf("💥已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
 				}
 		}
 	}()
 	for {
+		THREAD, _ := strconv.Atoi(THREAD)
+		if len(qBitList) < THREAD {
+			continue
+		}
 		sec := util.MeasureExecutionTime(mainTask)
-		util.Notify(fmt.Sprintf("运行结束 本次耗时 %v", sec), "")
+		util.Notify(fmt.Sprintf("💦Task end 本次耗时 %v", sec), "")
 		time.Sleep(60 * time.Second)
 	}
 }
