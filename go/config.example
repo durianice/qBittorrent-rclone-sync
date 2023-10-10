@@ -19,7 +19,7 @@ RCLONE_NAME="gdrive:"
 # rclone本地挂载目录
 RCLONE_LOCAL_DIR="/GoogleDrive"
 
-# 远程资源保存路径(以 "/" 结尾)
+# 远程资源保存路径(以 "/" 结尾)[请在云盘先手动创建这个文件夹]
 RCLONE_REMOTE_DIR="/media/"
 
 # rclone命令参数(一般不需要改)
