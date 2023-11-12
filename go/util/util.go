@@ -74,11 +74,11 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		}
 		// fmt.Print(line)
 		if strings.Contains(line, "Fail") {
-			Notify(fmt.Sprintf("同步发生错误 %v \n", line), "")
+			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
 			return nil
 		}
 		if strings.Contains(line, "Error") {
-			Notify(fmt.Sprintf("同步发生错误 %v \n", line), "")
+			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
 			return nil
 		}
 		if !strings.Contains(line, "ETA") {
