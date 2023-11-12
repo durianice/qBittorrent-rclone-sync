@@ -38,9 +38,9 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 		option = "copyto"
 	}
 	log_level := "ERROR"
-	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q --log-level %q %q %q", option,
+	command := fmt.Sprintf("/usr/bin/rclone -P %s --multi-thread-streams %s --log-file %q --log-level %q %q %q", option,
 		MULTI_THREAD_STREAMS, LOG_FILE, log_level, sourceFile, targetFile)
-	fmt.Printf("执行脚本命令：%v\n", command)
+	util.Notify(fmt.Sprintf("执行脚本命令\n %v\n", command), "执行脚本命令")
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
 		return err
@@ -218,10 +218,6 @@ func main() {
 		}
 	}()
 	for {
-		THREAD, _ := strconv.Atoi(THREAD)
-		if len(qBitList) < THREAD {
-			continue
-		}
 		sec := util.MeasureExecutionTime(mainTask)
 		util.Notify(fmt.Sprintf("💦Task end 本次耗时 %v", sec), "")
 		time.Sleep(60 * time.Second)
