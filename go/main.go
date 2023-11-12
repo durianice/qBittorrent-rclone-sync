@@ -37,8 +37,9 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 	if keepSourceFile {
 		option = "copyto"
 	}
-	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q %q %q", option,
-		MULTI_THREAD_STREAMS, LOG_FILE, sourceFile, targetFile)
+	log_level := "ERROR"
+	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q --log-level %q %q %q", option,
+		MULTI_THREAD_STREAMS, LOG_FILE, log_level, sourceFile, targetFile)
 	fmt.Printf("执行脚本命令：%v\n", command)
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
@@ -201,6 +202,7 @@ func category2Path(category string) string {
 func main() {
 	util.Env()
 	getConfig()
+	util.CreateDirIfNotExist(LOG_FILE)
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")
