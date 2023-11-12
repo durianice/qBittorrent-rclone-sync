@@ -128,3 +128,16 @@ func CreateCategory(category string, savePath string) {
 		log.Fatal("创建分类失败或分类已存在") 
 	} 
 }
+
+func DeleteTorrents(hashes string) {
+	url := getHost() + "/api/v2/torrents/delete"
+	h := make(map[string]string)
+	h["Referer"] = getHost()
+	p := make(map[string]string)
+	p["hashes"] = hashes
+	p["deleteFiles"] = "true"
+	_, err := util.PostForm(url, h, p)
+	if err != nil {
+		log.Fatal("删除失败") 
+	} 
+}
