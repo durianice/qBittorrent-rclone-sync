@@ -4,7 +4,7 @@
 ### 手动编辑/usr/local/bin/config.env
 ### 再重启qbrs
 
-# qbittorrent路径(浏览器访问的真实地址，本机默认127.0.0.1:端口就好。结尾不用 "/")
+# qbittorrent路径(浏览器访问的真实地址，ip:端口 结尾不用 "/")
 QBIT_URL="http://127.0.0.1:8080"
 
 QBIT_USER="admin"
@@ -25,14 +25,8 @@ RCLONE_REMOTE_DIR="/media/"
 # rclone命令参数(一般不需要改)
 MULTI_THREAD_STREAMS="10"
 
-# 程序运行日志(一般不需要改)
+# 程序运行(错误)日志(一般不需要改)
 LOG_FILE="/root/qbit_rclone_sync.log"
-
-# 需要在qBittorrent客户端增加对应标签并打上勾
-TAG_1="脚本控制"
-
-# 需要保种时添加这个标签
-TAG_2="保种"
 
 # rclone同步到远程并发线程数(根据实际情况修改，CPU不行就改小)
 THREAD=10

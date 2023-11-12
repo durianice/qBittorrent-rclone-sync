@@ -19,8 +19,6 @@ var (
 	RCLONE_REMOTE_DIR    string
 	MULTI_THREAD_STREAMS string
 	LOG_FILE             string
-	TAG_1                string
-	TAG_2                string
 	THREAD               string
 	DISK_LOCAL           string
 	MAX_MEM              string
@@ -29,6 +27,9 @@ var (
 
 const CATEGORY_1 = "_电影"
 const CATEGORY_2 = "_电视节目"
+const STAY_TAG = "保种"
+
+const version = "v1.1.9"
 
 var qBitList []map[string]interface{}
 
@@ -148,7 +149,7 @@ func mainTask() {
 			}
 		}
 		if util.FileExists(localTargetPath) {
-			if util.FileExists(sourcePath) && !strings.Contains(tags, TAG_2) {
+			if util.FileExists(sourcePath) && !strings.Contains(tags, STAY_TAG) {
 				command := fmt.Sprintf("sudo rm %q", sourcePath)
 				util.RunShellCommand(command)
 			}
@@ -159,7 +160,7 @@ func mainTask() {
 		wg.Add(1)
 		go func(ID int) {
 			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n%v\n%v", ID, total, name, subName)
-			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, TAG_2), syncMsg)
+			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, STAY_TAG), syncMsg)
 			if err != nil {
 				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", ID, total, name, subName, err), "")
 			}
@@ -181,8 +182,6 @@ func getConfig() {
 	RCLONE_REMOTE_DIR = os.Getenv("RCLONE_REMOTE_DIR")
 	MULTI_THREAD_STREAMS = os.Getenv("MULTI_THREAD_STREAMS")
 	LOG_FILE = os.Getenv("LOG_FILE")
-	TAG_1 = os.Getenv("TAG_1")
-	TAG_2 = os.Getenv("TAG_2")
 	THREAD = os.Getenv("THREAD")
 	DISK_LOCAL = os.Getenv("DISK_LOCAL")
 	MAX_MEM = os.Getenv("MAX_MEM")

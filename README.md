@@ -1,3 +1,5 @@
+#### 如在使用中有任何问题，请先使用一键更新命令升级到最新版本~
+
 ## 功能
 - 动态启动停止(硬盘使用xx时停止下载、占用小于xx时恢复下载)
 - 可选保种选项
@@ -30,14 +32,15 @@ sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rc
 sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
 ```
 
-## 参考配置文件
+## 配置文件
 [config.example](https://github.com/CCCOrz/qBittorrent-rclone-sync/blob/release/go/config.example)
+ 
+### 分类
+启动程序会自动创建 "_电影"、"_电视节目" 这两个分类
+注意：请在新增下载时选择分类之一，否则不会自动同步~
 
 ### 标签
-❗脚本控制：添加这个标签（或者添加自动创建的两个分类）会受💥**脚本控制**💥，按顺序下载，自动启动/停止
-保种：添加这个标签不会删除本地资源，用于刷上传量（不想保留了移除该标签会自动删除本地资源）
-### 分类
-启动程序会自动创建 "_电影"、"_电视节目" 这两个分类，为资源添加了分类会自动按文件夹归类并且受💥**脚本控制**💥
+想保留本地资源用于做种，给下载任务添加**保种**标签
 
 
 ![image](https://github.com/CCCOrz/qBittorrent-rclone-sync/assets/135111234/53a64c12-8610-4ffc-ad88-3c90c078ada0)
@@ -48,10 +51,6 @@ git clone -b release https://github.com/CCCOrz/qBittorrent-rclone-sync.git
 sudo bash go-build.sh
 ```
 
-## 注意事项
-- 启用脚本控制后会自动勾选<按顺序下载>保证磁盘不被未完成资源占坑
-- ❗目前版本添加tracker后需要手动添加并打上标签<脚本控制>
-- Docker版下载保存路径需要注意与实际挂载目录一致
 
 ## Todo
 - [ ] qBittorrent自动打标签
