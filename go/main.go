@@ -28,8 +28,9 @@ var (
 const CATEGORY_1 = "_电影"
 const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
+const CTRL_TAG = "脚本控制"
 
-const version = "v1.1.9"
+const currentVersion = "v1.2.1"
 
 var qBitList []map[string]interface{}
 
@@ -41,7 +42,7 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 	log_level := "ERROR"
 	command := fmt.Sprintf("/usr/bin/rclone -P %s --multi-thread-streams %s --log-file %q --log-level %q %q %q", option,
 		MULTI_THREAD_STREAMS, LOG_FILE, log_level, sourceFile, targetFile)
-	util.Notify(fmt.Sprintf("执行脚本命令\n %v\n", command), "执行脚本命令")
+	util.Notify(fmt.Sprintf("执行脚本命令\n %v\n", command), "")
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
 		return err
@@ -69,7 +70,7 @@ func getList() []map[string]interface{} {
 	list := http.GetInfo()
 	// 按标签过滤
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
-		return strings.Contains(obj["tags"].(string), TAG_1) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
+		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
 	})
 	res := util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
 		name, _ := obj["name"].(string)
@@ -144,7 +145,7 @@ func mainTask() {
 		if !util.FileExists(sourcePath) {
 			sourcePath = savePath + "/" + subName
 			if !util.FileExists(sourcePath) {
-				// fmt.Printf("%v\n未找到资源，跳过", sourcePath)
+				util.Notify(fmt.Sprintf("%v\n未找到资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
 				continue
 			}
 		}
@@ -152,8 +153,8 @@ func mainTask() {
 			if util.FileExists(sourcePath) && !strings.Contains(tags, STAY_TAG) {
 				command := fmt.Sprintf("sudo rm %q", sourcePath)
 				util.RunShellCommand(command)
+				util.Notify(fmt.Sprintf("%v\n远程云盘已有该资源，已删除本地资源", sourcePath), "")
 			}
-			// fmt.Printf("%v\n云盘已有该资源，跳过", sourcePath)
 			continue
 		}
 		ch <- struct{}{}
@@ -198,6 +199,31 @@ func category2Path(category string) string {
 	return ""
 }
 
+func checkVersion() {
+	owner := "durianice"
+	repo := "qBittorrent-rclone-sync"
+
+	latestVersion, err := util.GetLatestRelease(owner, repo)
+	if err != nil {
+		fmt.Printf("获取版本信息失败: %s\n", err)
+		os.Exit(1)
+		return
+	}
+
+	outdated, err := util.IsVersionOutdated(currentVersion, latestVersion)
+	if err != nil {
+		fmt.Printf("版本信息比较失败: %s\n", err)
+		return
+	}
+	if outdated {
+		url := "https://github.com/durianice/qBittorrent-rclone-sync#%E5%AE%89%E8%A3%85%E6%9B%B4%E6%96%B0"
+		util.Notify(fmt.Sprintf("发现新的版本 %s\n\n当前版本 %s\n\n<a href='%s'>前往更新</a>", latestVersion, currentVersion, url), "")
+		os.Exit(1)
+	} else {
+		util.Notify(fmt.Sprintf("当前为最新版本 %s", latestVersion), "")
+	}
+}
+
 func main() {
 	util.Env()
 	getConfig()
@@ -217,6 +243,7 @@ func main() {
 		}
 	}()
 	for {
+		checkVersion()
 		sec := util.MeasureExecutionTime(mainTask)
 		util.Notify(fmt.Sprintf("💦Task end 本次耗时 %v", sec), "")
 		time.Sleep(60 * time.Second)

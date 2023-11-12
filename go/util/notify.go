@@ -56,8 +56,10 @@ func sendTgBotMessage(msg string) string {
 	p := make(map[string]interface{})
 	p["chat_id"] = os.Getenv("CHAT_ID")
 	p["text"] = msg
+	p["parse_mode"] = "html"
 	res, err := Post(url, h, p)
 	if err != nil {
+		fmt.Println("sendTgBotMessage Error", res)
 		return ""
 	}
 	return res
@@ -72,6 +74,7 @@ func editTgBotMessage(msg string, id interface{}) bool {
 	p["text"] = msg
 	res, err := Post(url, h, p)
 	if err != nil {
+		fmt.Println("editTgBotMessage Error", res)
 		return false
 	}
 	parser := JSONParser{}
@@ -82,6 +85,7 @@ func editTgBotMessage(msg string, id interface{}) bool {
 	}
 	ok, msgErr := parser.Get("ok")
 	if msgErr != nil {
+		fmt.Println("解析 TG MSG JSON 失败：", err)
 		return false
 	}
 	return ok.(bool)
@@ -95,6 +99,7 @@ func deleteTgBotMessage(id interface{}) bool {
 	p["message_id"] = id
 	res, err := Post(url, h, p)
 	if err != nil {
+		fmt.Println("deleteTgBotMessage Error", res)
 		return false
 	}
 	parser := JSONParser{}
@@ -105,6 +110,7 @@ func deleteTgBotMessage(id interface{}) bool {
 	}
 	ok, msgErr := parser.Get("ok")
 	if msgErr != nil {
+		fmt.Println("解析 TG MSG JSON 失败：", err)
 		return false
 	}
 	return ok.(bool)

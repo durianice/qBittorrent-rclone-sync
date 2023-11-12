@@ -285,3 +285,57 @@ func indirectToStringerOrError(a interface{}) interface{} {
 	}
 	return v.Interface()
 }
+
+type Release struct {
+	TagName string `json:"tag_name"`
+}
+
+func GetLatestRelease(owner, repo string) (string, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
+	header := map[string]string{
+		"Accept": "application/vnd.github.v3+json",
+	}
+	params := map[string]interface{}{} // No params needed for this request
+
+	response, err := Get(url, header, params)
+	if err != nil {
+		return "", err
+	}
+
+	var release Release
+	err = json.Unmarshal([]byte(response), &release)
+	if err != nil {
+		return "", err
+	}
+
+	return release.TagName, nil
+}
+
+func IsVersionOutdated(currentVersion, latestVersion string) (bool, error) {
+	currentParts := strings.Split(strings.TrimPrefix(currentVersion, "v"), ".")
+	latestParts := strings.Split(strings.TrimPrefix(latestVersion, "v"), ".")
+
+	minLength := len(currentParts)
+	if len(latestParts) < minLength {
+		minLength = len(latestParts)
+	}
+
+	for i := 0; i < minLength; i++ {
+		currentInt, err := strconv.Atoi(currentParts[i])
+		if err != nil {
+			return false, err
+		}
+		latestInt, err := strconv.Atoi(latestParts[i])
+		if err != nil {
+			return false, err
+		}
+		if currentInt < latestInt {
+			return true, nil
+		} else if currentInt > latestInt {
+			return false, nil
+		}
+	}
+
+	// If all parts so far were equal, the shorter version is outdated if it has fewer parts.
+	return len(currentParts) < len(latestParts), nil
+}
