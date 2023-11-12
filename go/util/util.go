@@ -80,11 +80,9 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		if strings.Contains(syncProcess, "100%") {
 			syncMsg = strings.ReplaceAll(syncMsg, "🔵同步", "✅完成")
 		}
-		time.Sleep(30 * time.Second)
-		Notify(fmt.Sprintf("%v", syncMsg + "\n\n🎈实时进度\n" + syncProcess), flag)
+		Notify(fmt.Sprintf("%v", syncMsg+"\n\n🎈实时进度\n"+syncProcess), flag)
 		if err == io.EOF || strings.Contains(syncProcess, "100%") {
-			go func ()  {
-				time.Sleep(30 * time.Second)
+			go func() {
 				DeleteMsg(flag)
 			}()
 			break

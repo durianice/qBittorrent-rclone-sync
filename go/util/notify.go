@@ -7,6 +7,7 @@ import (
 )
 
 type notifyMap map[string]interface{}
+
 var notify notifyMap
 
 func init() {
@@ -14,8 +15,8 @@ func init() {
 }
 
 func Notify(msg string, _type string) {
-	
-	// fmt.Printf("%v\n", msg)
+
+	fmt.Printf("%v\n", msg)
 	msg = "[" + time.Now().Format("2006-01-02 15:04:05") + "]\n\n" + msg
 	if _type != "" && notify[_type] != nil && notify[_type] != "" {
 		editTgBotMessage(msg, notify[_type])
@@ -36,7 +37,7 @@ func Notify(msg string, _type string) {
 		// fmt.Println("message_id:", message_id)
 		notify[_type] = message_id
 	} else {
-		go func ()  {
+		go func() {
 			time.Sleep(30 * time.Second)
 			deleteTgBotMessage(message_id)
 		}()
@@ -58,7 +59,7 @@ func sendTgBotMessage(msg string) string {
 	res, err := Post(url, h, p)
 	if err != nil {
 		return ""
-	} 
+	}
 	return res
 }
 
@@ -72,7 +73,7 @@ func editTgBotMessage(msg string, id interface{}) bool {
 	res, err := Post(url, h, p)
 	if err != nil {
 		return false
-	} 
+	}
 	parser := JSONParser{}
 	parseErr := parser.Parse(res)
 	if parseErr != nil {

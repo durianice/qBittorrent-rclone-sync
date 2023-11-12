@@ -13,19 +13,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 var (
-	RCLONE_NAME string
-	RCLONE_LOCAL_DIR  string
-	RCLONE_REMOTE_DIR string
+	RCLONE_NAME          string
+	RCLONE_LOCAL_DIR     string
+	RCLONE_REMOTE_DIR    string
 	MULTI_THREAD_STREAMS string
-	LOG_FILE string
-	TAG_1 string
-	TAG_2 string
-	THREAD string
-	DISK_LOCAL string
-	MAX_MEM string
-	MIN_MEM string
+	LOG_FILE             string
+	TAG_1                string
+	TAG_2                string
+	THREAD               string
+	DISK_LOCAL           string
+	MAX_MEM              string
+	MIN_MEM              string
 )
 
 const CATEGORY_1 = "_电影"
@@ -39,13 +38,14 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 		option = "copyto"
 	}
 	command := fmt.Sprintf("/usr/bin/rclone -v -P %s --multi-thread-streams %s --log-file %q %q %q", option,
-	MULTI_THREAD_STREAMS, LOG_FILE, sourceFile, targetFile)
+		MULTI_THREAD_STREAMS, LOG_FILE, sourceFile, targetFile)
+	fmt.Printf("执行脚本命令：%v\n", command)
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
 		return err
 	}
 	return nil
-	
+
 }
 
 func memoryControl() string {
@@ -62,7 +62,7 @@ func memoryControl() string {
 	return "N"
 }
 
-func getList() ([]map[string]interface{}) {
+func getList() []map[string]interface{} {
 	http.Login()
 	list := http.GetInfo()
 	// 按标签过滤
@@ -85,15 +85,15 @@ func getList() ([]map[string]interface{}) {
 		subListDownloaded = util.Map(subListDownloaded, func(subObj map[string]interface{}) map[string]interface{} {
 			subName, _ := subObj["name"].(string)
 			return map[string]interface{}{
-				"name": name,
-				"subName": subName,
-				"hash": hash,
-				"tags": tags,
-				"category": category,
-				"seqDl": seqDl,
-				"state": state,
+				"name":         name,
+				"subName":      subName,
+				"hash":         hash,
+				"tags":         tags,
+				"category":     category,
+				"seqDl":        seqDl,
+				"state":        state,
 				"downloadPath": downloadPath,
-				"savePath": savePath,
+				"savePath":     savePath,
 			}
 		})
 		memState := memoryControl()
@@ -208,11 +208,11 @@ func main() {
 	go func() {
 		for {
 			select {
-				case <-ticker.C:
-					qBitList = getList()
-					util.Notify(fmt.Sprintf("💬查询到 %v 条已下载信息", len(qBitList)), "")
-					util.Notify(fmt.Sprintf("💥已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
-				}
+			case <-ticker.C:
+				qBitList = getList()
+				util.Notify(fmt.Sprintf("💬查询到 %v 条已下载信息", len(qBitList)), "")
+				util.Notify(fmt.Sprintf("💥已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
+			}
 		}
 	}()
 	for {
