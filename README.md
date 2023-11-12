@@ -37,13 +37,12 @@ sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rc
  
 ### 分类
 启动程序会自动创建 "_电影"、"_电视节目" 这两个分类
-注意：请在新增下载时选择分类之一，否则不会自动同步~
+
+
+**注意：请在新增下载时选择分类之一，否则不会自动同步~**
 
 ### 标签
 想保留本地资源用于做种，给下载任务添加**保种**标签
-
-
-![image](https://github.com/CCCOrz/qBittorrent-rclone-sync/assets/135111234/53a64c12-8610-4ffc-ad88-3c90c078ada0)
 
 ## 本地开发&手动编译
 ```
