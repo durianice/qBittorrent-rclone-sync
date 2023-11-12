@@ -145,7 +145,7 @@ func mainTask() {
 		if !util.FileExists(sourcePath) {
 			sourcePath = savePath + "/" + subName
 			if !util.FileExists(sourcePath) {
-				util.Notify(fmt.Sprintf("%v\n未找到资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
+				util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
 				continue
 			}
 		}
@@ -227,7 +227,7 @@ func checkVersion() {
 func main() {
 	util.Env()
 	getConfig()
-	util.CreateDirIfNotExist(LOG_FILE)
+	util.CreateFileIfNotExist(LOG_FILE)
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")

@@ -73,6 +73,14 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 			return fmt.Errorf("读取命令输出失败：%s", err)
 		}
 		// fmt.Print(line)
+		if strings.Contains(line, "Fail") {
+			Notify(fmt.Sprintf("同步发生错误 %v \n", line), "")
+			return nil
+		}
+		if strings.Contains(line, "Error") {
+			Notify(fmt.Sprintf("同步发生错误 %v \n", line), "")
+			return nil
+		}
 		if !strings.Contains(line, "ETA") {
 			continue
 		}
@@ -142,6 +150,20 @@ func CreateDirIfNotExist(dirPath string) {
 	} else {
 		fmt.Println("Directory already exists:", dirPath)
 	}
+}
+
+func CreateFileIfNotExist(filepath string) error {
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		// 文件不存在
+		file, err := os.Create(filepath)
+		if err != nil {
+			// 创建文件时出错
+			return err
+		}
+		defer file.Close()
+	}
+	// 文件已存在或已成功创建
+	return nil
 }
 
 func GetFreeSpace(dir string, unit string) (int, error) {
