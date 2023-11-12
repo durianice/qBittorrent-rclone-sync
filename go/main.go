@@ -30,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.1"
+const currentVersion = "v1.2.2"
 
 var qBitList []map[string]interface{}
 
