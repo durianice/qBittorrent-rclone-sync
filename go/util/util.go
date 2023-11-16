@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -75,11 +76,11 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		// fmt.Print(line)
 		if strings.Contains(line, "Fail") {
 			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
-			return nil
+			return errors.New(line)
 		}
 		if strings.Contains(line, "Error") {
 			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
-			return nil
+			return errors.New(line)
 		}
 		if !strings.Contains(line, "ETA") {
 			continue
