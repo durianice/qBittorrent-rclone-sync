@@ -30,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.4"
+const currentVersion = "v1.2.6"
 
 var qBitList []map[string]interface{}
 
@@ -171,7 +171,7 @@ func mainTask() {
 		wg.Add(1)
 		go func(ID int) {
 			defer wg.Done()
-    		defer func() { <-ch }()
+			defer func() { <-ch }()
 			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n%v\n%v", ID, total, name, subName)
 			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, STAY_TAG), syncMsg)
 			if err != nil {
