@@ -229,6 +229,10 @@ func checkVersion() {
 	if outdated {
 		url := "https://github.com/durianice/qBittorrent-rclone-sync#%E5%AE%89%E8%A3%85%E6%9B%B4%E6%96%B0"
 		util.Notify(fmt.Sprintf("发现新的版本 %s\n\n当前版本 %s\n\n<a href='%s'>前往更新</a>", latestVersion, currentVersion, url), "")
+		for _, obj := range qBitList {
+			http.Pause(obj["hash"].(string))
+		}
+		util.Notify("🥵已暂停全部下载，脚本退出", "")
 		os.Exit(1)
 	} else {
 		util.Notify(fmt.Sprintf("当前为最新版本 %s", latestVersion), "")
