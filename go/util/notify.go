@@ -38,7 +38,7 @@ func Notify(msg string, _type string) {
 		notify[_type] = message_id
 	} else {
 		go func() {
-			time.Sleep(30 * time.Second)
+			time.Sleep(60 * time.Second)
 			deleteTgBotMessage(message_id)
 		}()
 	}

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -73,12 +75,7 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		if err != nil && err != io.EOF {
 			return fmt.Errorf("读取命令输出失败：%s", err)
 		}
-		// fmt.Print(line)
-		if strings.Contains(line, "Fail") {
-			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
-			return errors.New(line)
-		}
-		if strings.Contains(line, "Error") {
+		if strings.Contains(strings.ToLower(line), "error") || strings.Contains(strings.ToLower(line), "fail") {
 			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
 			return errors.New(line)
 		}
@@ -92,6 +89,7 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		Notify(fmt.Sprintf("%v", syncMsg+"\n\n🎈实时进度\n"+syncProcess), flag)
 		if err == io.EOF || strings.Contains(syncProcess, "100%") {
 			go func() {
+				time.Sleep(120 * time.Second)
 				DeleteMsg(flag)
 			}()
 			break
@@ -361,4 +359,26 @@ func IsVersionOutdated(currentVersion, latestVersion string) (bool, error) {
 
 	// If all parts so far were equal, the shorter version is outdated if it has fewer parts.
 	return len(currentParts) < len(latestParts), nil
+}
+
+func IsDirectoryEmpty(path string) (bool, error) {
+	isEmpty := true
+
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			isEmpty = false
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return isEmpty, nil
 }

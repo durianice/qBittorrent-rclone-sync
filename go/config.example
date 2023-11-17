@@ -29,7 +29,7 @@ MULTI_THREAD_STREAMS="10"
 LOG_FILE="/root/qbit_rclone_sync.log"
 
 # rclone同步到远程并发线程数(根据实际情况修改，CPU不行就改小)
-THREAD=10
+THREAD=3
 
 # 内存控制
 # VPS内存占用大于等于这个值时停止下载

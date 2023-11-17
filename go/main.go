@@ -30,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.3"
+const currentVersion = "v1.2.4"
 
 var qBitList []map[string]interface{}
 
@@ -40,9 +40,9 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 		option = "copyto"
 	}
 	log_level := "ERROR"
-	command := fmt.Sprintf("/usr/bin/rclone -P %s --multi-thread-streams %s --log-file %q --log-level %q %q %q", option,
-		MULTI_THREAD_STREAMS, LOG_FILE, log_level, sourceFile, targetFile)
-	util.Notify(fmt.Sprintf("执行脚本命令\n %v\n", command), "")
+	// %s%s%s 防止路径中有全角字符，使用%q会转换为Unicode
+	command := fmt.Sprintf("/usr/bin/rclone -P %s --multi-thread-streams %s --log-file %q --log-level %q %s%s%s %s%s%s", option, MULTI_THREAD_STREAMS, LOG_FILE, log_level, "\"", sourceFile, "\"", "\"", targetFile, "\"")
+	util.Notify(fmt.Sprintf("执行脚本命令\n%s\n", command), "")
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
 		return err
@@ -70,6 +70,16 @@ func getList() []map[string]interface{} {
 	list := http.GetInfo()
 	// 按标签过滤
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
+		dir := obj["content_path"].(string)
+		progress := obj["progress"].(float64)
+		isEmpty, err := util.IsDirectoryEmpty(dir)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if isEmpty && progress == 1 {
+			http.DeleteTorrents(obj["hash"].(string))
+			util.Notify(fmt.Sprintf("%v\n😁文件夹是空的，删除本地目录和torrents\n", dir), "")
+		}
 		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
 	})
 	res := util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
@@ -145,7 +155,7 @@ func mainTask() {
 		if !util.FileExists(sourcePath) {
 			sourcePath = savePath + "/" + subName
 			if !util.FileExists(sourcePath) {
-				util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
+				// util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
 				continue
 			}
 		}
@@ -238,7 +248,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				qBitList = getList()
-				util.Notify(fmt.Sprintf("💬查询到 %v 条已下载信息", len(qBitList)), "")
+				util.Notify(fmt.Sprintf("💬查询到 %v 个已下载文件", len(qBitList)), "")
 				util.Notify(fmt.Sprintf("💥已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
 			}
 		}
