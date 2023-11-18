@@ -31,7 +31,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.8"
+const currentVersion = "v1.2.9"
 
 var qBitList []map[string]interface{}
 
@@ -274,6 +274,7 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
+				checkVersion()
 				qBitList = getList()
 				util.Notify(fmt.Sprintf("🤖 查询到 %v 个已下载文件", len(qBitList)), "")
 				util.Notify(fmt.Sprintf("🫣 小鸡已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
@@ -281,7 +282,6 @@ func main() {
 		}
 	}()
 	for {
-		checkVersion()
 		sec := util.MeasureExecutionTime(mainTask)
 		util.Notify(fmt.Sprintf("💩 跑完一遍了 花了 %v", sec), "")
 		time.Sleep(60 * time.Second)
