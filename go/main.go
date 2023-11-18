@@ -7,7 +7,6 @@ import (
 	"qbittorrentRcloneSync/util"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -31,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.3.0"
+const currentVersion = "v2.0.0"
 
 var qBitList []map[string]interface{}
 
@@ -132,77 +131,57 @@ func getList() []map[string]interface{} {
 	var r []map[string]interface{}
 	for _, obj := range res {
 		subListDownloaded, _ := obj["subListDownloaded"].([]map[string]interface{})
-		for _, subObj := range subListDownloaded {
-			r = append(r, subObj)
-		}
+		r = append(r, subListDownloaded...)
 	}
 	return r
 }
 
-func mainTask() {
-	var wg sync.WaitGroup
-	THREAD, err := strconv.Atoi(THREAD)
-	if err != nil {
-		panic("Error converting THREAD to int")
-	}
-	ch := make(chan struct{}, THREAD)
-
+func mainTask(index int, obj map[string]interface{}) {
 	total := len(qBitList)
-	for index, obj := range qBitList {
-		contentPath, _ := obj["contentPath"].(string)
-		isEmpty, _ := util.IsDirectoryEmpty(contentPath)
-		if isEmpty {
-			util.Notify(fmt.Sprintf("%v\n😓 这目录暂时没东西可以同步，下一个", contentPath), "")
-			continue
-		}
-
-		name, _ := obj["name"].(string)
-		tags, _ := obj["tags"].(string)
-		category, _ := obj["category"].(string)
-		downloadPath, _ := obj["downloadPath"].(string)
-		if QBIT_DIR != "" {
-			downloadPath = QBIT_DIR
-		}
-		savePath, _ := obj["savePath"].(string)
-		subName, _ := obj["subName"].(string)
-		sourcePath := downloadPath + "/" + subName
-		targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + category2Path(category) + subName
-		localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + category2Path(category) + subName
-		if !util.FileExists(sourcePath) {
-			sourcePath = savePath + "/" + subName
-			if !util.FileExists(sourcePath) {
-				// util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源", sourcePath), "")
-				continue
-			}
-		}
-		if util.FileExists(localTargetPath) {
-			if util.FileExists(sourcePath) {
-				if strings.Contains(tags, STAY_TAG) {
-					util.Notify(fmt.Sprintf("%v\n😵‍💫 同步过了，保下种", sourcePath), "")
-				} else {
-					command := fmt.Sprintf("sudo rm %q", sourcePath)
-					util.RunShellCommand(command)
-					util.Notify(fmt.Sprintf("%v\n😅 同步过了，不保种，删了", sourcePath), "")
-				}
-			}
-			continue
-		}
-		ch <- struct{}{}
-		wg.Add(1)
-		util.Notify("🙀 准备启动Rclone", "")
-		go func(ID int) {
-			defer wg.Done()
-			defer func() { <-ch }()
-			syncMsg := fmt.Sprintf("🤡 在同步了 (%v/%v)\n%v\n%v", ID, total, name, subName)
-			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, STAY_TAG), syncMsg)
-			if err != nil {
-				util.Notify(fmt.Sprintf("🥵 同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", ID, total, name, subName, err), "")
-				return
-			}
-		}(index + 1)
+	contentPath, _ := obj["contentPath"].(string)
+	isEmpty, _ := util.IsDirectoryEmpty(contentPath)
+	if isEmpty {
+		util.Notify(fmt.Sprintf("%v\n😓 这目录暂时没东西可以同步，下一个", contentPath), "")
+		return
 	}
-	defer wg.Wait()
-	defer close(ch)
+
+	name, _ := obj["name"].(string)
+	tags, _ := obj["tags"].(string)
+	category, _ := obj["category"].(string)
+	downloadPath, _ := obj["downloadPath"].(string)
+	if QBIT_DIR != "" {
+		downloadPath = QBIT_DIR
+	}
+	savePath, _ := obj["savePath"].(string)
+	subName, _ := obj["subName"].(string)
+	sourcePath := downloadPath + "/" + subName
+	targetPath := RCLONE_NAME + RCLONE_REMOTE_DIR + category2Path(category) + subName
+	localTargetPath := RCLONE_LOCAL_DIR + RCLONE_REMOTE_DIR + category2Path(category) + subName
+	if !util.FileExists(sourcePath) {
+		sourcePath = savePath + "/" + subName
+		if !util.FileExists(sourcePath) {
+			// util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源", sourcePath), "")
+			return
+		}
+	}
+	if util.FileExists(localTargetPath) {
+		if util.FileExists(sourcePath) {
+			if strings.Contains(tags, STAY_TAG) {
+				util.Notify(fmt.Sprintf("%v\n😵‍💫 同步过了，保下种", sourcePath), "")
+			} else {
+				command := fmt.Sprintf("sudo rm %q", sourcePath)
+				util.RunShellCommand(command)
+				util.Notify(fmt.Sprintf("%v\n😅 同步过了，不保种，删了", sourcePath), "")
+			}
+		}
+		return
+	}
+	syncMsg := fmt.Sprintf("🤡 在同步了 (%v/%v)\n%v\n%v", index+1, total, name, subName)
+	err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, STAY_TAG), syncMsg)
+	if err != nil {
+		util.Notify(fmt.Sprintf("🥵 同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", index+1, total, name, subName, err), "")
+		return
+	}
 }
 
 func getConfig() {
@@ -266,28 +245,48 @@ func checkVersion() {
 	}
 }
 
+func monitorTask(ticker *time.Ticker) {
+	defer ticker.Stop()
+	for range ticker.C {
+		qBitList := getList()
+		util.Notify(fmt.Sprintf("🤖 查询到 %v 个已下载文件", len(qBitList)), "")
+		util.Notify(fmt.Sprintf("🫣 小鸡已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
+	}
+}
+
 func main() {
 	util.Env()
 	util.Notify("🤠 欢迎使用", "")
+	checkVersion()
 	getConfig()
 	util.CreateFileIfNotExist(LOG_FILE)
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")
 	ticker := time.NewTicker(60 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				checkVersion()
-				qBitList = getList()
-				util.Notify(fmt.Sprintf("🤖 查询到 %v 个已下载文件", len(qBitList)), "")
-				util.Notify(fmt.Sprintf("🫣 小鸡已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
-			}
-		}
-	}()
-	for {
-		sec := util.MeasureExecutionTime(mainTask)
-		util.Notify(fmt.Sprintf("💩 跑完一遍了 花了 %v", sec), "")
+	go monitorTask(ticker)
+
+	THREAD, err := strconv.Atoi(THREAD)
+	if err != nil {
+		panic("Error converting THREAD to int")
 	}
+	pool := util.NewGoroutinePool(THREAD)
+	for index, obj := range qBitList {
+		i := index
+		o := obj
+		pool.Add(func() {
+			mainTask(i, o)
+			// util.Notify(fmt.Sprintf("%v %v", i, o), "")
+		})
+	}
+	pool.Wait()
+	util.Notify("🍉 本次任务循环完毕，30s后重启程序", "you are perfect")
+	time.Sleep(30 * time.Second)
+	output, err := util.RunShellCommand("systemctl restart qbrs")
+	if err != nil {
+		util.Notify(fmt.Sprintf("🌚 qbrs重启失败 %s", err), "")
+	} else {
+		util.Notify(fmt.Sprintf("🍄 已重启qbrs %s", output), "")
+	}
+	os.Exit(0)
 }
