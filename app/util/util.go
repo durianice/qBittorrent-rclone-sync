@@ -89,7 +89,7 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		Notify(fmt.Sprintf("%v", syncMsg+"\n\n🎃 实时进度\n"+syncProcess), flag)
 		if err == io.EOF || strings.Contains(syncProcess, "100%") {
 			go func() {
-				time.Sleep(120 * time.Second)
+				time.Sleep(60 * time.Second)
 				DeleteMsg(flag)
 			}()
 			break
@@ -359,24 +359,47 @@ func IsVersionOutdated(currentVersion, latestVersion string) (bool, error) {
 	return len(currentParts) < len(latestParts), nil
 }
 
-func IsDirectoryEmpty(path string) (bool, error) {
-	isEmpty := true
+// CheckPathStatus checks if a path is an empty directory or if a file exists.
+func CheckPathStatus(path string) (bool, error) {
+	// Check if the path exists
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// The path does not exist
+			return true, nil
+		}
+		// Other error
+		return true, err
+	}
 
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	// Check if the path is a file
+	if !info.IsDir() {
+		// The path is a file and it exists
+		return false, nil
+	}
+
+	// The path is a directory, now check if it's empty
+	isEmpty := true
+	err = filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
+		// Found a file, the directory is not empty
 		if !d.IsDir() {
 			isEmpty = false
+			// Return a special error to stop walking the directory
+			return fs.SkipDir
 		}
 
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && err != fs.SkipDir {
+		// An error occurred that wasn't the special 'SkipDir' error
 		return false, err
 	}
 
+	// If we got here, the directory is either empty or we encountered 'SkipDir'
 	return isEmpty, nil
 }

@@ -30,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v2.0.0"
+const currentVersion = "v2.0.1"
 
 var qBitList []map[string]interface{}
 
@@ -72,7 +72,7 @@ func getList() []map[string]interface{} {
 	inCtrlList := util.Filter(list, func(obj map[string]interface{}) bool {
 		dir := obj["content_path"].(string)
 		progress := obj["progress"].(float64)
-		isEmpty, err := util.IsDirectoryEmpty(dir)
+		isEmpty, err := util.CheckPathStatus(dir)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -139,9 +139,9 @@ func getList() []map[string]interface{} {
 func mainTask(index int, obj map[string]interface{}) {
 	total := len(qBitList)
 	contentPath, _ := obj["contentPath"].(string)
-	isEmpty, _ := util.IsDirectoryEmpty(contentPath)
+	isEmpty, _ := util.CheckPathStatus(contentPath)
 	if isEmpty {
-		util.Notify(fmt.Sprintf("%v\n😓 这目录暂时没东西可以同步，下一个", contentPath), "")
+		util.Notify(fmt.Sprintf("%v\n😓 文件不在了或者目录为空，下一个", contentPath), "")
 		return
 	}
 
@@ -184,7 +184,7 @@ func mainTask(index int, obj map[string]interface{}) {
 	}
 }
 
-func getConfig() {
+func initConfig() {
 	err := godotenv.Load(util.GetRealAbsolutePath() + "/config.env")
 	if err != nil {
 		panic(err)
@@ -245,19 +245,35 @@ func monitorTask(ticker *time.Ticker) {
 		qBitList := getList()
 		util.Notify(fmt.Sprintf("🤖 查询到 %v 个已下载文件", len(qBitList)), "")
 		util.Notify(fmt.Sprintf("🫣 小鸡已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
+		util.Notify(fmt.Sprintf("📌 网盘已用空间：%s ", util.GetUsedSpacePercentage(RCLONE_LOCAL_DIR)), "")
 	}
+}
+
+func restartSelf() {
+	util.Notify("🍉 10s后重启程序", "you are perfect")
+	time.Sleep(10 * time.Second)
+	output, err := util.RunShellCommand("systemctl restart qbrs")
+	if err != nil {
+		util.Notify(fmt.Sprintf("🌚 qbrs重启失败 %s", err), "")
+	} else {
+		util.Notify(fmt.Sprintf("🍄 已重启qbrs %s", output), "")
+	}
+	os.Exit(0)
 }
 
 func main() {
 	util.Env()
+	initConfig()
+
 	util.Notify("🤠 欢迎使用", "")
 	checkVersion()
-	getConfig()
+
 	util.CreateFileIfNotExist(LOG_FILE)
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")
-	ticker := time.NewTicker(60 * time.Second)
+
+	ticker := time.NewTicker(55 * time.Second)
 	go monitorTask(ticker)
 
 	THREAD, err := strconv.Atoi(THREAD)
@@ -274,13 +290,14 @@ func main() {
 		})
 	}
 	pool.Wait()
-	util.Notify("🍉 本次任务循环完毕，30s后重启程序", "you are perfect")
-	time.Sleep(30 * time.Second)
-	output, err := util.RunShellCommand("systemctl restart qbrs")
-	if err != nil {
-		util.Notify(fmt.Sprintf("🌚 qbrs重启失败 %s", err), "")
-	} else {
-		util.Notify(fmt.Sprintf("🍄 已重启qbrs %s", output), "")
+	// watching
+	for {
+		qBitList = getList()
+		if len(qBitList) != 0 {
+			restartSelf()
+			break
+		}
+		util.Notify("💤💤💤 暂无下载任务", "")
+		time.Sleep(60 * time.Second)
 	}
-	os.Exit(0)
 }
