@@ -231,15 +231,9 @@ func checkVersion() {
 		for _, obj := range qBitList {
 			http.Pause(obj["hash"].(string))
 		}
-		util.Notify("😄 已暂停全部下载，正在自动更新...", "")
-		output, err := util.RunShellCommand("sudo bash -c \"$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/install-qbrs.sh)\"")
-		if err != nil {
-			util.Notify(fmt.Sprintf("😱 自动更新失败 %s", err), "")
-		} else {
-			util.Notify(fmt.Sprintf("😬 已更新并重启 %s", output), "")
-		}
 		url := "https://github.com/durianice/qBittorrent-rclone-sync"
-		util.Notify(fmt.Sprintf("👀 <a href='%s'>查看具体更新内容</a>", url), "")
+		util.Notify(fmt.Sprintf("😄 已暂停全部下载，请手动更新程序\n\n👀 <a href='%s'>前往更新</a>", url), "")
+		os.Exit(0)
 	} else {
 		util.Notify(fmt.Sprintf("😄 当前为最新版本 %s", latestVersion), "")
 	}
