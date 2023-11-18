@@ -20,21 +20,21 @@
 本机 Ubuntu 20.04 / 2CPU / 1GB RAM / 硬盘40GB
 
 
-支持的平台：[见发行版](https://github.com/CCCOrz/qBittorrent-rclone-sync/releases)
+支持的平台：[见发行版](https://github.com/durianice/qBittorrent-rclone-sync/releases)
 
 
 ## 安装/更新
 ```
-sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/install-qbrs.sh)"
+sudo bash -c "$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/install-qbrs.sh)"
 ```
 
 ## 卸载
 ```
-sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
+sudo bash -c "$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
 ```
 
 ## 配置文件
-[config.example](https://github.com/CCCOrz/qBittorrent-rclone-sync/blob/release/go/config.example)
+[config.example](https://github.com/durianice/qBittorrent-rclone-sync/blob/release/app/config.example)
  
 ### 分类
 启动程序会自动创建 "_电影"、"_电视节目" 这两个分类
@@ -47,7 +47,7 @@ sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rc
 
 ## 本地开发&手动编译
 ```
-git clone -b release https://github.com/CCCOrz/qBittorrent-rclone-sync.git
+git clone -b release https://github.com/durianice/qBittorrent-rclone-sync.git
 sudo bash go-build.sh
 ```
 

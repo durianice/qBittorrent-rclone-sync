@@ -12,5 +12,5 @@ fi
 
 if [[ ! -f "/etc/systemd/system/qbrs.service" ]]; then
     echo "已卸载qbrs"
-    echo "https://github.com/CCCOrz/qBittorrent-rclone-sync/"
+    echo "https://github.com/durianice/qBittorrent-rclone-sync/"
 fi

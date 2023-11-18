@@ -41,13 +41,13 @@ install() {
     type=$(get_platform)
     filename="qbrs_${type}"
     cd ~
-    REPO_URL="https://api.github.com/repos/CCCOrz/qBittorrent-rclone-sync/releases/latest"
+    REPO_URL="https://api.github.com/repos/durianice/qBittorrent-rclone-sync/releases/latest"
     TAG=$(wget -qO- -t1 -T2 ${REPO_URL} | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
     if [[ -z $TAG ]]; then
         TAG="latest"
     fi
-    wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/$TAG/$filename"
-    wget -O config.example https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
+    wget "https://github.com/durianice/qBittorrent-rclone-sync/releases/download/$TAG/$filename"
+    wget -O config.example https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/app/config.example
 
     if [[ ! -f "$filename" ]]; then
         echo "运行程序 qbrs 不存在"
@@ -100,12 +100,12 @@ install() {
     echo "配置文件 ${WORK_DIR}/config.env"
     echo "开机自启 systemctl enable qbrs"
     echo "禁用自启 systemctl disable qbrs"
-    echo "更多https://github.com/CCCOrz/qBittorrent-rclone-sync"
+    echo "更多https://github.com/durianice/qBittorrent-rclone-sync"
     echo "======== QBRS ========"
 }
 
 uninstall() {
-    sudo bash -c "$(curl -sL https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
+    sudo bash -c "$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/uninstall-qbrs.sh)"
 }
 
 if [[ -f "/etc/systemd/system/qbrs.service" ]]; then
