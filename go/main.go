@@ -23,6 +23,7 @@ var (
 	DISK_LOCAL           string
 	MAX_MEM              string
 	MIN_MEM              string
+	QBIT_DIR             string
 )
 
 const CATEGORY_1 = "_电影"
@@ -30,7 +31,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.6"
+const currentVersion = "v1.2.7"
 
 var qBitList []map[string]interface{}
 
@@ -42,7 +43,7 @@ func rcloneTask(sourceFile string, targetFile string, keepSourceFile bool, syncM
 	log_level := "ERROR"
 	// %s%s%s 防止路径中有全角字符，使用%q会转换为Unicode
 	command := fmt.Sprintf("/usr/bin/rclone -P %s --multi-thread-streams %s --log-file %q --log-level %q %s%s%s %s%s%s", option, MULTI_THREAD_STREAMS, LOG_FILE, log_level, "\"", sourceFile, "\"", "\"", targetFile, "\"")
-	util.Notify(fmt.Sprintf("执行脚本命令\n%s\n", command), "")
+	util.Notify(fmt.Sprintf("🍪 正在你的小鸡上执行\n%s\n", command), "")
 	err := util.RunRcloneCommand(command, syncMsg, sourceFile)
 	if err != nil {
 		return err
@@ -78,7 +79,7 @@ func getList() []map[string]interface{} {
 		}
 		if isEmpty && progress == 1 {
 			http.DeleteTorrents(obj["hash"].(string))
-			util.Notify(fmt.Sprintf("%v\n😁文件夹是空的，删除本地目录和torrents\n", dir), "")
+			util.Notify(fmt.Sprintf("%v\n😁 文件夹是空的，删除本地目录和torrents\n", dir), "")
 		}
 		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
 	})
@@ -111,9 +112,11 @@ func getList() []map[string]interface{} {
 		})
 		memState := memoryControl()
 		if memState == "P" {
+			util.Notify("🤢 内存不够了暂停一下先", "")
 			http.Pause(hash)
 		}
 		if memState == "D" {
+			util.Notify("😸 元气满满，恢复下载", "")
 			http.Resume(hash)
 		}
 		if !seqDl {
@@ -147,6 +150,9 @@ func mainTask() {
 		tags, _ := obj["tags"].(string)
 		category, _ := obj["category"].(string)
 		downloadPath, _ := obj["downloadPath"].(string)
+		if QBIT_DIR != "" {
+			downloadPath = QBIT_DIR
+		}
 		savePath, _ := obj["savePath"].(string)
 		subName, _ := obj["subName"].(string)
 		sourcePath := downloadPath + "/" + subName
@@ -155,27 +161,32 @@ func mainTask() {
 		if !util.FileExists(sourcePath) {
 			sourcePath = savePath + "/" + subName
 			if !util.FileExists(sourcePath) {
-				// util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源，请检查qBittorrent下载路径和真实本地保存路径是否一致", sourcePath), "")
+				// util.Notify(fmt.Sprintf("%v\n未找到或已同步该资源", sourcePath), "")
 				continue
 			}
 		}
 		if util.FileExists(localTargetPath) {
-			if util.FileExists(sourcePath) && !strings.Contains(tags, STAY_TAG) {
-				command := fmt.Sprintf("sudo rm %q", sourcePath)
-				util.RunShellCommand(command)
-				util.Notify(fmt.Sprintf("%v\n远程云盘已有该资源，已删除本地资源", sourcePath), "")
+			if util.FileExists(sourcePath) {
+				if strings.Contains(tags, STAY_TAG) {
+					util.Notify(fmt.Sprintf("%v\n😵‍💫 同步过了，保下种", sourcePath), "")
+				} else {
+					command := fmt.Sprintf("sudo rm %q", sourcePath)
+					util.RunShellCommand(command)
+					util.Notify(fmt.Sprintf("%v\n😅 同步过了，不保种，删了", sourcePath), "")
+				}
 			}
 			continue
 		}
 		ch <- struct{}{}
 		wg.Add(1)
+		util.Notify("🙀 准备启动Rclone", "")
 		go func(ID int) {
 			defer wg.Done()
 			defer func() { <-ch }()
-			syncMsg := fmt.Sprintf("🔵同步 (%v/%v)\n%v\n%v", ID, total, name, subName)
+			syncMsg := fmt.Sprintf("🤡 在同步了 (%v/%v)\n%v\n%v", ID, total, name, subName)
 			err := rcloneTask(sourcePath, targetPath, strings.Contains(tags, STAY_TAG), syncMsg)
 			if err != nil {
-				util.Notify(fmt.Sprintf("❌同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", ID, total, name, subName, err), "")
+				util.Notify(fmt.Sprintf("🥵 同步错误 (%v/%v)\n%v\n%v \n错误原因 %v", ID, total, name, subName, err), "")
 				return
 			}
 		}(index + 1)
@@ -198,6 +209,7 @@ func getConfig() {
 	DISK_LOCAL = os.Getenv("DISK_LOCAL")
 	MAX_MEM = os.Getenv("MAX_MEM")
 	MIN_MEM = os.Getenv("MIN_MEM")
+	QBIT_DIR = os.Getenv("QBIT_DIR")
 }
 
 func category2Path(category string) string {
@@ -228,19 +240,20 @@ func checkVersion() {
 	}
 	if outdated {
 		url := "https://github.com/durianice/qBittorrent-rclone-sync#%E5%AE%89%E8%A3%85%E6%9B%B4%E6%96%B0"
-		util.Notify(fmt.Sprintf("发现新的版本 %s\n\n当前版本 %s\n\n<a href='%s'>前往更新</a>", latestVersion, currentVersion, url), "")
+		util.Notify(fmt.Sprintf("😆 发现新的版本 %s\n\n当前版本 %s\n\n<a href='%s'>前往更新</a>", latestVersion, currentVersion, url), "")
 		for _, obj := range qBitList {
 			http.Pause(obj["hash"].(string))
 		}
-		util.Notify("🥵已暂停全部下载，脚本退出", "")
+		util.Notify("😄 已暂停全部下载，脚本退出", "")
 		os.Exit(1)
 	} else {
-		util.Notify(fmt.Sprintf("当前为最新版本 %s", latestVersion), "")
+		util.Notify(fmt.Sprintf("😄 当前为最新版本 %s", latestVersion), "")
 	}
 }
 
 func main() {
 	util.Env()
+	util.Notify("🤠 欢迎使用", "")
 	getConfig()
 	util.CreateFileIfNotExist(LOG_FILE)
 	qBitList = getList()
@@ -252,15 +265,15 @@ func main() {
 			select {
 			case <-ticker.C:
 				qBitList = getList()
-				util.Notify(fmt.Sprintf("💬查询到 %v 个已下载文件", len(qBitList)), "")
-				util.Notify(fmt.Sprintf("💥已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
+				util.Notify(fmt.Sprintf("🤖 查询到 %v 个已下载文件", len(qBitList)), "")
+				util.Notify(fmt.Sprintf("🫣 小鸡已用空间：%s ", util.GetUsedSpacePercentage(DISK_LOCAL)), "")
 			}
 		}
 	}()
 	for {
 		checkVersion()
 		sec := util.MeasureExecutionTime(mainTask)
-		util.Notify(fmt.Sprintf("💦Task end 本次耗时 %v", sec), "")
+		util.Notify(fmt.Sprintf("💩 跑完一遍了 花了 %v", sec), "")
 		time.Sleep(60 * time.Second)
 	}
 }

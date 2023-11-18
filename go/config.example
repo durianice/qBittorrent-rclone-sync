@@ -40,3 +40,8 @@ MIN_MEM=40%
 # Telegram Bot通知
 CHAT_ID="123456"
 BOT_TOKEN="123456:abcdef"
+
+# 非 Docker 版本下载器直接跳过，保持默认
+# 本地 qbittorrent 下载读取绝对路径(Docker版可以在这里指定读取目录)
+# 请用绝对路径，如："/qb/downloads"，结尾不用 "/"
+QBIT_DIR=""

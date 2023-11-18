@@ -76,7 +76,7 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 			return fmt.Errorf("读取命令输出失败：%s", err)
 		}
 		if strings.Contains(strings.ToLower(line), "error") || strings.Contains(strings.ToLower(line), "fail") {
-			Notify(fmt.Sprintf("❌同步发生错误 %v \n", line), line)
+			Notify(fmt.Sprintf("🥵 同步发生错误 %v \n", line), line)
 			return errors.New(line)
 		}
 		if !strings.Contains(line, "ETA") {
@@ -84,9 +84,9 @@ func RunRcloneCommand(command string, syncMsg string, flag string) error {
 		}
 		syncProcess := getFormatOutput(line)
 		if strings.Contains(syncProcess, "100%") {
-			syncMsg = strings.ReplaceAll(syncMsg, "🔵同步", "✅完成")
+			syncMsg = strings.ReplaceAll(syncMsg, "🤡 在同步了", "✅ 完成")
 		}
-		Notify(fmt.Sprintf("%v", syncMsg+"\n\n🎈实时进度\n"+syncProcess), flag)
+		Notify(fmt.Sprintf("%v", syncMsg+"\n\n🎃 实时进度\n"+syncProcess), flag)
 		if err == io.EOF || strings.Contains(syncProcess, "100%") {
 			go func() {
 				time.Sleep(120 * time.Second)

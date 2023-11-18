@@ -47,7 +47,7 @@ install() {
         TAG="latest"
     fi
     wget "https://github.com/CCCOrz/qBittorrent-rclone-sync/releases/download/$TAG/$filename"
-    wget https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
+    wget -O config.example https://raw.githubusercontent.com/CCCOrz/qBittorrent-rclone-sync/release/go/config.example
 
     if [[ ! -f "$filename" ]]; then
         echo "运行程序 qbrs 不存在"
@@ -63,6 +63,7 @@ install() {
 
     if [[ ! -f "${WORK_DIR}/config.env" ]]; then
         cp config.example ${WORK_DIR}/config.env
+        rm config.example
     fi
 
     mv $filename ${WORK_DIR}/
