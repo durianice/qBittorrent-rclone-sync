@@ -31,7 +31,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.9"
+const currentVersion = "v1.3.0"
 
 var qBitList []map[string]interface{}
 
@@ -238,8 +238,7 @@ func checkVersion() {
 
 	latestVersion, err := util.GetLatestRelease(owner, repo)
 	if err != nil {
-		fmt.Printf("获取版本信息失败: %s\n", err)
-		os.Exit(1)
+		util.Notify(fmt.Sprintf("🤯 获取版本信息失败 %s", err), "")
 		return
 	}
 
@@ -249,13 +248,19 @@ func checkVersion() {
 		return
 	}
 	if outdated {
-		url := "https://github.com/durianice/qBittorrent-rclone-sync#%E5%AE%89%E8%A3%85%E6%9B%B4%E6%96%B0"
-		util.Notify(fmt.Sprintf("😆 发现新的版本 %s\n\n当前版本 %s\n\n<a href='%s'>前往更新</a>", latestVersion, currentVersion, url), "")
+		util.Notify(fmt.Sprintf("😆 发现新的版本 %s\n当前版本 %s\n", latestVersion, currentVersion), "")
 		for _, obj := range qBitList {
 			http.Pause(obj["hash"].(string))
 		}
-		util.Notify("😄 已暂停全部下载，脚本退出", "")
-		os.Exit(1)
+		util.Notify("😄 已暂停全部下载，正在自动更新...", "")
+		output, err := util.RunShellCommand("sudo bash -c \"$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent-rclone-sync/release/install-qbrs.sh)\"")
+		if err != nil {
+			util.Notify(fmt.Sprintf("😱 自动更新失败 %s", err), "")
+		} else {
+			util.Notify(fmt.Sprintf("😬 已更新并重启 %s", output), "")
+		}
+		url := "https://github.com/durianice/qBittorrent-rclone-sync"
+		util.Notify(fmt.Sprintf("👀 <a href='%s'>查看具体更新内容</a>", url), "")
 	} else {
 		util.Notify(fmt.Sprintf("😄 当前为最新版本 %s", latestVersion), "")
 	}
