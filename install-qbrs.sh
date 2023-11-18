@@ -69,11 +69,15 @@ install() {
     mv $filename ${WORK_DIR}/
     chmod +x "${WORK_DIR}/$filename"
 
+    cpu_cores=$(grep -c ^processor /proc/cpuinfo)
+    quota=$((cpu_cores * 75))
+
     echo "[Unit]
     Description=qBittorrent-rclone-sync
     After=network.target
 
     [Service]
+    CPUQuota=${quota}%
     ExecStart=${WORK_DIR}/$filename
     WorkingDirectory=${WORK_DIR}/
     Restart=on-abnormal

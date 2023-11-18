@@ -117,7 +117,7 @@ func getList() []map[string]interface{} {
 			util.Notify("🤢 内存不够了暂停一下先", "")
 			http.Pause(hash)
 		}
-		if memState == "D" && state != "downloading" {
+		if memState == "D" && state == "pausedDL" {
 			util.Notify("😸 元气满满，恢复下载", "")
 			http.Resume(hash)
 		}
@@ -201,8 +201,8 @@ func mainTask() {
 			}
 		}(index + 1)
 	}
-	wg.Wait()
-	close(ch)
+	defer wg.Wait()
+	defer close(ch)
 }
 
 func getConfig() {
@@ -274,7 +274,7 @@ func main() {
 	qBitList = getList()
 	http.CreateCategory(CATEGORY_1, "")
 	http.CreateCategory(CATEGORY_2, "")
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	go func() {
 		for {
 			select {
@@ -289,6 +289,5 @@ func main() {
 	for {
 		sec := util.MeasureExecutionTime(mainTask)
 		util.Notify(fmt.Sprintf("💩 跑完一遍了 花了 %v", sec), "")
-		time.Sleep(60 * time.Second)
 	}
 }
