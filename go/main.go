@@ -31,7 +31,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v1.2.7"
+const currentVersion = "v1.2.8"
 
 var qBitList []map[string]interface{}
 
@@ -79,7 +79,7 @@ func getList() []map[string]interface{} {
 		}
 		if isEmpty && progress == 1 {
 			http.DeleteTorrents(obj["hash"].(string))
-			util.Notify(fmt.Sprintf("%v\n😁 文件夹是空的，删除本地目录和torrents\n", dir), "")
+			util.Notify(fmt.Sprintf("%v\n😁 这个同步完了，删除本地空目录和torrents任务\n", dir), "")
 		}
 		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
 	})
@@ -91,6 +91,7 @@ func getList() []map[string]interface{} {
 		seqDl, _ := obj["seq_dl"].(bool)
 		state, _ := obj["state"].(string)
 		downloadPath, _ := obj["download_path"].(string)
+		contentPath, _ := obj["content_path"].(string)
 		savePath, _ := obj["save_path"].(string)
 		// 过滤已下载完成的子内容
 		subListDownloaded := util.Filter(http.GetDetail(hash), func(obj map[string]interface{}) bool {
@@ -108,19 +109,21 @@ func getList() []map[string]interface{} {
 				"state":        state,
 				"downloadPath": downloadPath,
 				"savePath":     savePath,
+				"contentPath":  contentPath,
 			}
 		})
 		memState := memoryControl()
-		if memState == "P" {
+		if memState == "P" && state == "downloading" {
 			util.Notify("🤢 内存不够了暂停一下先", "")
 			http.Pause(hash)
 		}
-		if memState == "D" {
+		if memState == "D" && state != "downloading" {
 			util.Notify("😸 元气满满，恢复下载", "")
 			http.Resume(hash)
 		}
 		if !seqDl {
 			http.ToggleSequentialDownload(hash)
+			util.Notify("🥶 已强制按顺序下载，不然鸡爆了", "")
 		}
 		return map[string]interface{}{
 			"subListDownloaded": subListDownloaded,
@@ -146,6 +149,13 @@ func mainTask() {
 
 	total := len(qBitList)
 	for index, obj := range qBitList {
+		contentPath, _ := obj["contentPath"].(string)
+		isEmpty, _ := util.IsDirectoryEmpty(contentPath)
+		if isEmpty {
+			util.Notify(fmt.Sprintf("%v\n😓 这目录暂时没东西可以同步，下一个", contentPath), "")
+			continue
+		}
+
 		name, _ := obj["name"].(string)
 		tags, _ := obj["tags"].(string)
 		category, _ := obj["category"].(string)
