@@ -403,3 +403,9 @@ func CheckPathStatus(path string) (bool, error) {
 	// If we got here, the directory is either empty or we encountered 'SkipDir'
 	return isEmpty, nil
 }
+
+func Trim(originalString string) string {
+	reg := regexp.MustCompile(`\s+`)
+	noSpacesString := reg.ReplaceAllString(originalString, "")
+	return noSpacesString
+}

@@ -37,7 +37,8 @@ sudo bash -c "$(curl -sL https://raw.githubusercontent.com/durianice/qBittorrent
 [config.example](https://github.com/durianice/qBittorrent-rclone-sync/blob/release/app/config.example)
  
 ### 分类
-启动程序会自动创建 "_电影"、"_电视节目" 这两个分类
+- 启动程序会自动创建 "_电影"、"_电视节目" 这两个分类
+- 传入自定义分类：如“合集”，对应的保存目录则为 `env.RCLONE_LOCAL_DIR/env.RCLONE_REMOTE_DIR/合集/`
 
 
 **注意：请在新增下载时选择分类之一，否则不会自动同步~**

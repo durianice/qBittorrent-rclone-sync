@@ -30,7 +30,7 @@ const CATEGORY_2 = "_电视节目"
 const STAY_TAG = "保种"
 const CTRL_TAG = "脚本控制"
 
-const currentVersion = "v2.0.1"
+const currentVersion = "v2.0.2"
 
 var qBitList []map[string]interface{}
 
@@ -80,7 +80,7 @@ func getList() []map[string]interface{} {
 			http.DeleteTorrents(obj["hash"].(string))
 			util.Notify(fmt.Sprintf("%v\n😁 这个同步完了，删除本地空目录和torrents任务\n", dir), "")
 		}
-		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2)
+		return strings.Contains(obj["tags"].(string), CTRL_TAG) || strings.Contains(obj["category"].(string), CATEGORY_1) || strings.Contains(obj["category"].(string), CATEGORY_2) || obj["category"].(string) != ""
 	})
 	res := util.Map(inCtrlList, func(obj map[string]interface{}) map[string]interface{} {
 		name, _ := obj["name"].(string)
@@ -204,11 +204,11 @@ func initConfig() {
 func category2Path(category string) string {
 	if category == CATEGORY_1 {
 		return "movie/"
-	}
-	if category == CATEGORY_2 {
+	} else if category == CATEGORY_2 {
 		return "tv/"
+	} else {
+		return util.Trim(category) + "/"
 	}
-	return ""
 }
 
 func checkVersion() {
